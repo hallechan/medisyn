@@ -75,100 +75,95 @@ class ResearchScraper:
         # get detailed articles with metadata (not just plain text)
         # returns title, authors, url, publication date, plus processed fields
         # uses pubmed scraper + text processor
-        
+
         # use default keyword if none provided
         search_keyword = keyword or HEALTH_KEYWORDS[0]
         
-        print(f"\n🔍 Getting detailed articles for: '{search_keyword}'")
+        print(f"\nGetting detailed articles for: '{search_keyword}'")
         
-        # Get articles from PubMed
+        # get articles from PubMed
         articles = self.pubmed_scraper.search_articles(search_keyword, max_results)
-        
-        # Add processed information to each article
+
+        # add processed information to each article
         for i, article in enumerate(articles, 1):
-            print(f"🔄 Processing article {i}...")
+            print(f"Processing article {i}...")
             
-            # Add cleaned abstract
+            # add cleaned abstract
             article['clean_abstract'] = self.text_processor.clean_abstract(
                 article.get('abstract', '')
             )
             
-            # Add relevance score
+            # add relevance score
             article['relevance_score'] = self.text_processor.calculate_relevance_score(article)
             
-            # Add key findings
+            # add key findings
             article['key_findings'] = self.text_processor.extract_key_findings(
                 article.get('abstract', '')
             )
         
-        print(f"✅ Processed {len(articles)} detailed articles")
+        print(f"Processed {len(articles)} detailed articles")
         return articles
     
     def search_by_condition(self, condition: str, max_results: int = 5) -> List[str]:
-        """
-        Search for articles related to a specific health condition
         
-        Args:
-            condition: Health condition key like 'breast_cancer', 'reproductive_health'
-            max_results: Max results per keyword
-            
-        Returns:
-            Combined list of plain text abstracts from multiple related searches
-        """
-        print(f"\n🏥 Searching for condition: {condition}")
+        # search for articles related to a specific health condition
+        # uses multiple keywords for that condition
+        # combines results, returns list of plain text abstracts
         
-        # Get keywords for this condition
+        print(f"\nSearching for condition: {condition}")
+        
+        # get keywords for this condition
         keywords = get_keywords_for_condition(condition)
-        print(f"📝 Using keywords: {keywords[:3]}...")  # Show first 3
+        print(f"Using keywords: {keywords[:3]}...")  # show first 3
         
         all_texts = []
         
-        # Search with multiple keywords for this condition
-        for i, keyword in enumerate(keywords[:3], 1):  # Limit to 3 to avoid rate limits
+        # search with multiple keywords for this condition
+        for i, keyword in enumerate(keywords[:3], 1):  # limit to 3 to avoid rate limits
             print(f"\n--- Search {i}/3: '{keyword}' ---")
-            texts = self.get_research_articles(keyword, max_results)
-            all_texts.extend(texts)
+            texts = self.get_research_articles(keyword, max_results) # reuse main method
+            all_texts.extend(texts) # combine results
             
-        print(f"\n🎯 Total articles for {condition}: {len(all_texts)}")
-        return all_texts
+        print(f"\nTotal articles for {condition}: {len(all_texts)}") 
+        return all_texts # return combined results
 
-def main():
-    """
-    Example of how to use the ResearchScraper
-    Run this file to test your scraper!
-    """
+def main(): 
+    
+    # simple test script for manual testing
+    
     print("=" * 50)
-    print("🧬 MediSyn Research Scraper Test")
+    print("medisyn research scraper test")
     print("=" * 50)
     
-    # Initialize the scraper
+    # initialize the scraper
     scraper = ResearchScraper()
     
-    # Example 1: Get plain text abstracts (your main use case)
+    # get plain text abstracts (main use case)
     print("\n" + "=" * 30)
-    print("📝 TEST 1: Plain Text Abstracts")
+    print("TEST 1: plain text abstracts")
     print("=" * 30)
     
     abstracts = scraper.get_research_articles(
         keyword="breast cancer treatment women",
-        max_results=3  # Small number for testing
+        max_results=3  # small number for testing
     )
     
     for i, abstract in enumerate(abstracts, 1):
         print(f"\n--- Abstract {i} ---")
-        print(f"{abstract[:200]}...")  # Show first 200 characters
+        print(f"{abstract[:200]}...")  # show first 200 characters
         print("-" * 40)
     
-    # Example 2: Get detailed articles with metadata
+    # get detailed articles with metadata
     print("\n" + "=" * 30)
-    print("📊 TEST 2: Detailed Articles")  
+    print("TEST 2: detailed articles")  
     print("=" * 30)
     
-    detailed_articles = scraper.get_detailed_articles(
+    detailed_articles = scraper.get_detailed_articles( # reuse method
         keyword="PCOS treatment",
         max_results=2
     )
     
+    # print summary of each article
     for i, article in enumerate(detailed_articles, 1):
         print(f"\n--- Article {i} ---")
         print(f"Title: {article['title'][:80]}...")
@@ -177,13 +172,14 @@ def main():
         print(f"URL: {article['url']}")
         print("-" * 40)
     
-    # Example 3: Search by condition
+    # search by condition
     print("\n" + "=" * 30)
-    print("🏥 TEST 3: Search by Condition")
+    print("TEST 3: Search by Condition")
     print("=" * 30)
-    
+
+    # search for articles related to 'breast cancer'
     condition_articles = scraper.search_by_condition('breast_cancer', max_results=2)
     print(f"\nGot {len(condition_articles)} articles for breast cancer condition")
 
-if __name__ == "__main__":
+if __name__ == "__main__": # run main function
     main()
