@@ -1,0 +1,34 @@
+# --- Environment files ---
+.env
+.env.local
+.env.*.local
+
+# --- Backend-specific files ---
+uploads/*
+!uploads/.gitkeep      # keep placeholder so folder exists in repo
+
+# --- Dependency directories ---
+node_modules/
+jspm_packages/
+
+# --- Build output ---
+dist/
+build/
+
+# --- Cache and logs ---
+.npm
+.npmrc
+.eslintcache
+.yarn-integrity
+.pnp.*
+.node_repl_history
+*.tgz
+logs/
+*.log
+*.log.*
+
+# --- OS / Editor junk ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
