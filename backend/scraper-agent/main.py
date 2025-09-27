@@ -3,6 +3,7 @@
 
 from typing import List, Dict, Optional
 from config.keywords import HEALTH_KEYWORDS, get_keywords_for_condition
+from config.ai_keywords import AIKeywordGenerator
 from scrapers.pubmed_scraper import PubMedScraper
 from processing.text_processor import TextProcessor
 
@@ -10,13 +11,24 @@ class ResearchScraper:
     # main scraper service that brings everything together
     # what other components will use, simple methods
     
-    def __init__(self, api_key: Optional[str] = None): 
-        
-        # initialize scrapers + text processor
-    
+    def __init__(self, api_key: Optional[str] = None, gemini_api_key: Optional[str] = None):
+
+        # initialize scrapers + text processor + AI keyword generator
+
         print("Initializing ResearchScraper...")
         self.pubmed_scraper = PubMedScraper(api_key)
         self.text_processor = TextProcessor()
+
+        # initialize AI keyword generator
+        self.ai_keywords = None
+        if gemini_api_key:
+            try:
+                self.ai_keywords = AIKeywordGenerator(gemini_api_key)
+                print("AI keyword generator ready")
+            except Exception as e: # catch errors, go back to hardcoded keywords
+                print(f"AI keyword generator failed to initialize: {e}")
+                print("Falling back to hardcoded keywords")
+
         print("PubMed scraper ready")
         print("Text processor ready")
         
@@ -124,8 +136,64 @@ class ResearchScraper:
             texts = self.get_research_articles(keyword, max_results) # reuse main method
             all_texts.extend(texts) # combine results
             
-        print(f"\nTotal articles for {condition}: {len(all_texts)}") 
+        print(f"\nTotal articles for {condition}: {len(all_texts)}")
         return all_texts # return combined results
+
+    def search_with_ai(self, topic: str, max_results: int = 10, min_relevance: float = 0.3) -> List[str]:
+        
+        # AI-powered search using Gemini to generate keywords
+        # generates smart keywords based on natural language topic
+        # searches PubMed with those keywords, combines results
+
+        if not self.ai_keywords: # if AI not initialized
+            print("AI keyword generator not available. Use gemini_api_key parameter in constructor.")
+            return []
+
+        print(f"\nAI-powered search for: '{topic}'")
+
+        # generate smart keywords using AI
+        print("Generating keywords with AI...")
+        ai_keywords = self.ai_keywords.generate_keywords(topic, num_keywords=3)
+        print(f"AI generated keywords: {ai_keywords}")
+
+        all_articles = []
+
+        # search with each AI-generated keyword
+        for i, keyword in enumerate(ai_keywords, 1):
+            print(f"\n--- AI Search {i}/{len(ai_keywords)}: '{keyword}' ---")
+            articles = self.get_research_articles(keyword, max_results, min_relevance)
+            all_articles.extend(articles)
+
+        print(f"\nTotal AI-powered results: {len(all_articles)} articles")
+        return all_articles
+
+    def smart_condition_search(self, condition: str, max_results: int = 5) -> List[str]:
+
+        # advanced condition search using AI-generated keywords
+        # combines hardcoded keywords + AI-generated ones for comprehensive search
+        # returns list of relevant article abstracts
+
+        if not self.ai_keywords:
+            print("AI keyword generator not available. Use gemini_api_key parameter in constructor.")
+            return self.search_by_condition(condition, max_results)  # fallback
+
+        print(f"\nSmart condition search for: '{condition}'")
+
+        # generate comprehensive condition keywords with AI
+        print("Generating condition-specific keywords...")
+        condition_keywords = self.ai_keywords.generate_condition_keywords(condition, num_keywords=4)
+        print(f"AI condition keywords: {condition_keywords}")
+
+        all_articles = []
+
+        # search with each AI-generated condition keyword
+        for i, keyword in enumerate(condition_keywords, 1):
+            print(f"\n--- Condition Search {i}/{len(condition_keywords)}: '{keyword}' ---")
+            articles = self.get_research_articles(keyword, max_results, min_relevance=0.2)  # lower threshold for condition searches
+            all_articles.extend(articles)
+
+        print(f"\n🎉 Total condition results: {len(all_articles)} articles")
+        return all_articles
 
 def main(): 
     
@@ -180,6 +248,13 @@ def main():
     # search for articles related to 'breast cancer'
     condition_articles = scraper.search_by_condition('breast_cancer', max_results=2)
     print(f"\nGot {len(condition_articles)} articles for breast cancer condition")
+
+    # test AI-powered search if Gemini API key is available
+    print("\n" + "=" * 30)
+    print("TEST 4: AI-Powered Search")
+    print("=" * 30)
+
+    
 
 if __name__ == "__main__": # run main function
     main()
