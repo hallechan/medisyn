@@ -3,6 +3,7 @@
 
 import requests
 import xml.etree.ElementTree as ET
+import time
 from typing import List, Dict, Optional
 from .base_scraper import BaseScraper
 
@@ -71,6 +72,9 @@ class PubMedScraper(BaseScraper):
         # make the API request
         response = self.session.get(search_url, params=params)
         response.raise_for_status()  # raise error if request failed
+
+        # add delay to respect rate limits (3 requests/sec without API key)
+        time.sleep(0.4)  # 400ms delay between requests
         
         # parse the JSON response to get article IDs
         data = response.json()
@@ -102,6 +106,9 @@ class PubMedScraper(BaseScraper):
         # make the API request
         response = self.session.get(fetch_url, params=params)
         response.raise_for_status()
+
+        # add delay to respect rate limits
+        time.sleep(0.4)  # 400ms delay between requests
         
         # parse the XML response
         return self._parse_pubmed_xml(response.text)
