@@ -19,8 +19,8 @@ class AIKeywordGenerator:
 
         genai.configure(api_key=self.api_key)
 
-        # use Gemini 1.5 Flash for fast, efficient keyword generation
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        # use Gemini 2.5 Flash for fast, efficient keyword generation
+        self.model = genai.GenerativeModel('gemini-2.5-flash')
 
     def generate_keywords(self, topic: str, num_keywords: int = 5, focus: str = "women's health") -> List[str]:
 
@@ -57,6 +57,14 @@ class AIKeywordGenerator:
             # parse the JSON response
             keywords_text = response.text.strip()
 
+            # clean up response - remove markdown formatting
+            if '```json' in keywords_text:
+                # extract JSON from markdown code block
+                start = keywords_text.find('[')
+                end = keywords_text.rfind(']') + 1
+                if start != -1 and end != 0:
+                    keywords_text = keywords_text[start:end]
+
             # extract JSON array from response
             if keywords_text.startswith('[') and keywords_text.endswith(']'):
                 keywords = json.loads(keywords_text)
@@ -67,7 +75,7 @@ class AIKeywordGenerator:
                 keywords = []
                 for line in lines:
                     line = line.strip().strip('"-').strip()
-                    if line and not line.startswith('[') and not line.startswith(']'):
+                    if line and not line.startswith('[') and not line.startswith(']') and not line.startswith('```'):
                         keywords.append(line)
                 return keywords[:num_keywords]
 
@@ -102,6 +110,13 @@ class AIKeywordGenerator:
             response = self.model.generate_content(prompt)
             keywords_text = response.text.strip()
 
+            # clean up response - remove markdown formatting
+            if '```json' in keywords_text:
+                start = keywords_text.find('[')
+                end = keywords_text.rfind(']') + 1
+                if start != -1 and end != 0:
+                    keywords_text = keywords_text[start:end]
+
             if keywords_text.startswith('[') and keywords_text.endswith(']'):
                 keywords = json.loads(keywords_text)
                 return keywords[:num_keywords]
@@ -111,7 +126,7 @@ class AIKeywordGenerator:
                 keywords = []
                 for line in lines:
                     line = line.strip().strip('"-').strip()
-                    if line and not line.startswith('[') and not line.startswith(']'):
+                    if line and not line.startswith('[') and not line.startswith(']') and not line.startswith('```'):
                         keywords.append(line)
                 return keywords[:num_keywords]
 
@@ -144,6 +159,13 @@ class AIKeywordGenerator:
             response = self.model.generate_content(prompt)
             keywords_text = response.text.strip()
 
+            # clean up response - remove markdown formatting
+            if '```json' in keywords_text:
+                start = keywords_text.find('[')
+                end = keywords_text.rfind(']') + 1
+                if start != -1 and end != 0:
+                    keywords_text = keywords_text[start:end]
+
             if keywords_text.startswith('[') and keywords_text.endswith(']'):
                 keywords = json.loads(keywords_text)
                 return keywords[:max_keywords]
@@ -153,7 +175,7 @@ class AIKeywordGenerator:
                 keywords = []
                 for line in lines:
                     line = line.strip().strip('"-').strip()
-                    if line and not line.startswith('[') and not line.startswith(']'):
+                    if line and not line.startswith('[') and not line.startswith(']') and not line.startswith('```'):
                         keywords.append(line)
                 return keywords[:max_keywords]
 
