@@ -17,6 +17,10 @@ const defaultDraft: AppointmentDraft = {
   duration: '45 minutes',
   weightKg: undefined,
   heightCm: undefined,
+  bloodPressureSystolic: undefined,
+  bloodPressureDiastolic: undefined,
+  spo2Percent: undefined,
+  temperatureC: undefined,
   notes: '',
   diagnosticFocus: [],
   heartbeatBpm: undefined
@@ -41,6 +45,29 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
 }) => {
   const [form, setForm] = useState<AppointmentDraft>(draft ?? defaultDraft);
   const [focusInput, setFocusInput] = useState('');
+
+  const getDurationParts = (value?: string) => {
+    if (!value) {
+      return { hours: '', minutes: '' };
+    }
+    const hoursMatch = value.match(/(\d+)\s*(?:h|hour|hours)/i);
+    const minutesMatch = value.match(/(\d+)\s*(?:m|min|minute|minutes)/i);
+    return {
+      hours: hoursMatch ? hoursMatch[1] : '',
+      minutes: minutesMatch ? minutesMatch[1] : ''
+    };
+  };
+
+  const formatDuration = (hoursValue?: number, minutesValue?: number) => {
+    const parts: string[] = [];
+    if (hoursValue != null && !Number.isNaN(hoursValue)) {
+      parts.push(`${hoursValue}h`);
+    }
+    if (minutesValue != null && !Number.isNaN(minutesValue)) {
+      parts.push(`${minutesValue}m`);
+    }
+    return parts.join(' ');
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -92,6 +119,8 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     onClose();
   };
 
+  const durationParts = getDurationParts(form.duration);
+
   return (
     <div className="appointment-modal-overlay" role="dialog" aria-modal="true">
       <div className="appointment-modal-backdrop" onClick={onClose} />
@@ -118,7 +147,7 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
           }}
         >
           <div className="row g-4">
-            <div className="col-12 col-lg-6">
+            <div className="col-12 col-lg-9">
               <label className="form-label">appointment type</label>
               <select
                 className="form-select rounded-3 token-input"
@@ -131,18 +160,44 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                 <option>telehealth check-in</option>
               </select>
             </div>
-            <div className="col-6 col-lg-3">
+            <div className="col-12 col-lg-3">
               <label className="form-label">duration</label>
-              <select
-                className="form-select rounded-3 token-input"
-                value={form.duration}
-                onChange={(event) => updateForm({ duration: event.target.value })}
-              >
-                <option>45 minutes</option>
-                <option>30 minutes</option>
-                <option>60 minutes</option>
-              </select>
+              <div className="d-flex align-items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  className="form-control rounded-3 token-input flex-grow-1"
+                  placeholder="hours"
+                  value={durationParts.hours}
+                  onChange={(event) => {
+                    const hoursValue = event.target.value;
+                    const hours = hoursValue === '' ? undefined : Number(hoursValue);
+                    if (hours != null && (Number.isNaN(hours) || hours < 0)) return;
+                    const minutes = durationParts.minutes === '' ? undefined : Number(durationParts.minutes);
+                    const duration = formatDuration(hours, minutes);
+                    updateForm({ duration: duration || '' });
+                  }}
+                />
+                <span className="text-muted fw-semibold">/</span>
+                <input
+                  type="number"
+                  min={0}
+                  className="form-control rounded-3 token-input flex-grow-1"
+                  placeholder="minutes"
+                  value={durationParts.minutes}
+                  onChange={(event) => {
+                    const minutesValue = event.target.value;
+                    const minutes = minutesValue === '' ? undefined : Number(minutesValue);
+                    if (minutes != null && (Number.isNaN(minutes) || minutes < 0)) return;
+                    const hours = durationParts.hours === '' ? undefined : Number(durationParts.hours);
+                    const duration = formatDuration(hours, minutes);
+                    updateForm({ duration: duration || '' });
+                  }}
+                />
+              </div>
             </div>
+          </div>
+          <div className="row g-4">
             <div className="col-6 col-lg-3">
               <label className="form-label">heartbeat (bpm)</label>
               <input
@@ -152,6 +207,55 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                 value={form.heartbeatBpm ?? ''}
                 onChange={(event) =>
                   updateForm({ heartbeatBpm: Number(event.target.value) || undefined })
+                }
+              />
+            </div>
+            <div className="col-6 col-lg-3">
+              <label className="form-label">blood pressure (mmHg)</label>
+              <div className="d-flex align-items-center gap-2">
+                <input
+                  type="number"
+                  className="form-control rounded-3 token-input flex-grow-1"
+                  placeholder="systolic"
+                  value={form.bloodPressureSystolic ?? ''}
+                  onChange={(event) =>
+                    updateForm({ bloodPressureSystolic: Number(event.target.value) || undefined })
+                  }
+                />
+                <span className="text-muted fw-semibold">/</span>
+                <input
+                  type="number"
+                  className="form-control rounded-3 token-input flex-grow-1"
+                  placeholder="diastolic"
+                  value={form.bloodPressureDiastolic ?? ''}
+                  onChange={(event) =>
+                    updateForm({ bloodPressureDiastolic: Number(event.target.value) || undefined })
+                  }
+                />
+              </div>
+            </div>
+            <div className="col-6 col-lg-3">
+              <label className="form-label">spo₂ (%)</label>
+              <input
+                type="number"
+                className="form-control rounded-3 token-input"
+                placeholder="e.g. 98"
+                value={form.spo2Percent ?? ''}
+                onChange={(event) =>
+                  updateForm({ spo2Percent: Number(event.target.value) || undefined })
+                }
+              />
+            </div>
+            <div className="col-6 col-lg-3">
+              <label className="form-label">temperature (°c)</label>
+              <input
+                type="number"
+                step="0.1"
+                className="form-control rounded-3 token-input"
+                placeholder="e.g. 36.8"
+                value={form.temperatureC ?? ''}
+                onChange={(event) =>
+                  updateForm({ temperatureC: Number(event.target.value) || undefined })
                 }
               />
             </div>
