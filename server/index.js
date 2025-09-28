@@ -208,6 +208,135 @@ app.post('/api/patients/:id/appointments', async (req, res) => {
   }
 });
 
+// AI-Powered Diagnostic Assistance Endpoint
+app.post('/api/ai-diagnosis', async (req, res) => {
+  try {
+    const {
+      symptomSummary,
+      appointmentType,
+      weightKg,
+      heightCm,
+      heartbeatBpm,
+      diagnosticFocus,
+      notes,
+      patientAge
+    } = req.body;
+
+    // Validate required fields
+    if (!symptomSummary || symptomSummary.trim() === '') {
+      return res.status(400).json({
+        message: 'Symptom summary is required for AI diagnosis'
+      });
+    }
+
+    // Build comprehensive symptom description for AI analysis
+    let fullSymptomDescription = symptomSummary;
+
+    // Add context from other fields
+    if (appointmentType) {
+      fullSymptomDescription += ` Patient scheduled for ${appointmentType}.`;
+    }
+
+    if (weightKg || heightCm) {
+      const bmi = weightKg && heightCm ? (weightKg / Math.pow(heightCm / 100, 2)).toFixed(1) : null;
+      fullSymptomDescription += ` Physical measurements: weight ${weightKg}kg, height ${heightCm}cm`;
+      if (bmi) fullSymptomDescription += `, BMI ${bmi}`;
+      fullSymptomDescription += '.';
+    }
+
+    if (heartbeatBpm) {
+      fullSymptomDescription += ` Heart rate: ${heartbeatBpm} bpm.`;
+    }
+
+    if (patientAge) {
+      fullSymptomDescription += ` Patient age: ${patientAge} years.`;
+    }
+
+    if (diagnosticFocus && diagnosticFocus.length > 0) {
+      fullSymptomDescription += ` Areas of focus: ${diagnosticFocus.join(', ')}.`;
+    }
+
+    if (notes && notes.trim() !== '') {
+      fullSymptomDescription += ` Additional notes: ${notes}`;
+    }
+
+    console.log('🧠 Processing AI diagnosis request...');
+    console.log('📝 Full symptom description:', fullSymptomDescription);
+
+    // Call Python diagnostic assistant using spawn
+    const { spawn } = await import('child_process');
+
+    const pythonProcess = spawn('python3', [
+      '../backend/scraper-agent/ai_diagnosis_api.py',
+      JSON.stringify({
+        symptom_description: fullSymptomDescription,
+        gemini_api_key: process.env.GEMINI_API_KEY,
+        max_results: 3
+      })
+    ]);
+
+    let resultData = '';
+    let errorData = '';
+
+    pythonProcess.stdout.on('data', (data) => {
+      resultData += data.toString();
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      errorData += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          const diagnoses = JSON.parse(resultData);
+
+          // Format response for frontend
+          const response = {
+            success: true,
+            symptom_analysis: fullSymptomDescription,
+            diagnoses: diagnoses.map(d => ({
+              condition: d.diagnosis,
+              certainty_score: d.certainty_score,
+              confidence_level: d.certainty_score >= 0.7 ? 'High' :
+                              d.certainty_score >= 0.4 ? 'Moderate' : 'Low',
+              supporting_evidence: d.supporting_evidence,
+              research_articles_count: d.research_articles,
+              key_findings: d.key_findings
+            })),
+            generated_at: new Date().toISOString(),
+            ai_model: 'Gemini 2.5 Flash + PubMed Research'
+          };
+
+          console.log('✅ AI diagnosis completed successfully');
+          console.log(`📊 Found ${diagnoses.length} potential diagnoses`);
+
+          res.json(response);
+        } catch (parseError) {
+          console.error('❌ Failed to parse AI response:', parseError);
+          res.status(500).json({
+            message: 'Failed to parse AI diagnosis results',
+            error: parseError.message
+          });
+        }
+      } else {
+        console.error('❌ Python process failed:', errorData);
+        res.status(500).json({
+          message: 'AI diagnosis service failed',
+          error: errorData
+        });
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ AI diagnosis endpoint error:', error);
+    res.status(500).json({
+      message: 'Internal server error during AI diagnosis',
+      error: error.message
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
