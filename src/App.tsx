@@ -26,7 +26,7 @@ const DEFAULT_ACCESSIBILITY_PREFERENCES: AccessibilityPreferences = {
 function App() {
   // Update temperature vital for active patient
   const handleTemperatureMeasured = (temperature: number) => {
-    const isHealthy = temperature >= 36.1 && temperature <= 37.2;
+    const isHealthy = temperature >= 19 && temperature <= 36;
     setPatientList((prev) =>
       prev.map((patient) => {
         if (patient.id !== activePatientId) return patient;

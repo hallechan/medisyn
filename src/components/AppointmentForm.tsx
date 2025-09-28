@@ -463,12 +463,12 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                       <span className="fw-bold">temperature: {temperature.toFixed(2)} °C</span>
                       <br />
                       {(() => {
-                        if (temperature >= 22 && temperature <= 35) {
-                          return <span className="text-success">Body temperature is healthy.</span>;
-                        } else if (temperature < 22) {
-                          return <span className="text-warning">Body temperature is below normal.</span>;
+                        if (temperature >= 19 && temperature <= 36) {
+                          return <span style={{ color: 'black' }}>body temperature is healthy.</span>;
+                        } else if (temperature < 19) {
+                          return <span style={{ color: 'black' }}>body temperature is below normal.</span>;
                         } else {
-                          return <span className="text-danger">Body temperature is above normal.</span>;
+                          return <span style={{ color: 'black' }}>body temperature is above normal.</span>;
                         }
                       })()}
                     </>
