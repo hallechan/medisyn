@@ -147,6 +147,9 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     setShowAIDiagnosis(true);
 
     try {
+      // Get the latest redness score from webcam snapshots
+      const latestRednessScore = snapshots.length > 0 ? snapshots[snapshots.length - 1].redness : undefined;
+
       const response = await fetch('http://localhost:4000/api/ai-diagnosis', {
         method: 'POST',
         headers: {
@@ -158,6 +161,11 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
           weightKg: form.weightKg,
           heightCm: form.heightCm,
           heartbeatBpm: form.heartbeatBpm,
+          bloodPressureSystolic: form.bloodPressureSystolic,
+          bloodPressureDiastolic: form.bloodPressureDiastolic,
+          temperatureC: form.temperatureC,
+          spo2Percent: form.spo2Percent,
+          rednessScore: latestRednessScore,
           diagnosticFocus: form.diagnosticFocus,
           notes: form.notes,
           patientAge: patientAge

@@ -155,6 +155,11 @@ app.post('/api/ai-diagnosis', async (req, res) => {
       weightKg,
       heightCm,
       heartbeatBpm,
+      bloodPressureSystolic,
+      bloodPressureDiastolic,
+      temperatureC,
+      spo2Percent,
+      rednessScore,
       diagnosticFocus,
       notes,
       patientAge
@@ -183,7 +188,36 @@ app.post('/api/ai-diagnosis', async (req, res) => {
     }
 
     if (heartbeatBpm) {
-      fullSymptomDescription += ` Heart rate: ${heartbeatBpm} bpm.`;
+      const heartRateStatus = heartbeatBpm < 60 ? 'bradycardia (low)' :
+                             heartbeatBpm > 100 ? 'tachycardia (elevated)' : 'normal range';
+      fullSymptomDescription += ` Heart rate: ${heartbeatBpm} bpm (${heartRateStatus}).`;
+    }
+
+    if (bloodPressureSystolic && bloodPressureDiastolic) {
+      const bpStatus = bloodPressureSystolic >= 140 || bloodPressureDiastolic >= 90 ? 'hypertensive' :
+                       bloodPressureSystolic < 90 || bloodPressureDiastolic < 60 ? 'hypotensive' :
+                       bloodPressureSystolic >= 120 ? 'elevated' : 'normal';
+      fullSymptomDescription += ` Blood pressure: ${bloodPressureSystolic}/${bloodPressureDiastolic} mmHg (${bpStatus}).`;
+    }
+
+    if (temperatureC) {
+      const tempStatus = temperatureC >= 38.0 ? 'fever' :
+                        temperatureC < 36.1 ? 'hypothermic' : 'normal';
+      const tempF = (temperatureC * 9/5 + 32).toFixed(1);
+      fullSymptomDescription += ` Body temperature: ${temperatureC}°C (${tempF}°F) - ${tempStatus}.`;
+    }
+
+    if (spo2Percent) {
+      const oxygenStatus = spo2Percent < 95 ? 'low (hypoxemia)' :
+                          spo2Percent < 98 ? 'slightly low' : 'normal';
+      fullSymptomDescription += ` Blood oxygen saturation: ${spo2Percent}% (${oxygenStatus}).`;
+    }
+
+    if (rednessScore !== undefined && rednessScore !== null) {
+      const rednessStatus = rednessScore < 130 ? 'low (possible circulation issues)' :
+                           rednessScore > 180 ? 'high (possible inflammation/irritation)' :
+                           'normal range (healthy circulation)';
+      fullSymptomDescription += ` Facial redness score: ${rednessScore} (${rednessStatus}, target range: 130-180).`;
     }
 
     if (patientAge) {
@@ -191,7 +225,7 @@ app.post('/api/ai-diagnosis', async (req, res) => {
     }
 
     if (diagnosticFocus && diagnosticFocus.length > 0) {
-      fullSymptomDescription += ` Areas of focus: ${diagnosticFocus.join(', ')}.`;
+      fullSymptomDescription += ` Diagnostic focus areas for specialized analysis: ${diagnosticFocus.join(', ')}. Please prioritize diagnoses and recommendations related to these specific areas.`;
     }
 
     if (notes && notes.trim() !== '') {
