@@ -62,9 +62,9 @@ async def cv_stream(websocket):
                 import random
                 import math
 
-                # Mock redness with some variation
-                redness = 50 + 20 * math.sin(frame_count * 0.1) + random.uniform(-5, 5)
-                redness = max(0, min(255, redness))
+                # Mock redness with realistic variation around target range (130-180)
+                redness = 155 + 25 * math.sin(frame_count * 0.1) + random.uniform(-10, 10)
+                redness = max(100, min(220, redness))
 
                 # Mock emotions that cycle through
                 emotions = ["happy", "neutral", "surprised", "sad", "angry"]
