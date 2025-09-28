@@ -87,7 +87,7 @@ function App() {
     setDraftAppointments((prev) => ({ ...prev, [patientId]: draft }));
   };
 
-  const handlePublishAppointment = (patientId: string, draft: AppointmentDraft) => {
+  const handlePublishAppointment = async (patientId: string, draft: AppointmentDraft) => {
     const timestamp = Date.now();
     const recordDraft: AppointmentDraft = {
       ...draft,
@@ -155,13 +155,25 @@ function App() {
       );
 
       try {
-        await fetch(`${API_BASE}/api/patients/${patientId}`, {
+        const response = await fetch(`${API_BASE}/api/patients/${patientId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(updatedPatientRecord)
         });
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`);
+        }
+
+        const persistedPatient = await response.json();
+        setPatientList((prev) =>
+          prev.map((patient) => (patient.id === patientId ? persistedPatient : patient))
+        );
       } catch (error) {
         console.error('Failed to persist appointment publish to API', error);
+        setPatientList((prev) =>
+          prev.map((patient) => (patient.id === patientId ? existingPatient : patient))
+        );
       }
     }
 
@@ -173,40 +185,80 @@ function App() {
     setIsAppointmentOpen(false);
   };
 
-  const handleUpdateMedications = (patientId: string, meds: Medication[]) => {
+  const handleUpdateMedications = async (patientId: string, meds: Medication[]) => {
+    const existingPatient = patientList.find((patient) => patient.id === patientId);
+    if (!existingPatient) return;
+
+    const optimisticPatient = { ...existingPatient, medications: meds };
     setPatientList((prev) =>
-      prev.map((patient) =>
-        patient.id === patientId
-          ? {
-              ...patient,
-              medications: meds
-            }
-          : patient
-      )
+      prev.map((patient) => (patient.id === patientId ? optimisticPatient : patient))
     );
+
+    try {
+      const response = await fetch(`${API_BASE}/api/patients/${patientId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ medications: meds })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const updatedPatient = await response.json();
+      setPatientList((prev) =>
+        prev.map((patient) => (patient.id === patientId ? updatedPatient : patient))
+      );
+    } catch (error) {
+      console.error('Failed to persist medication changes', error);
+      setPatientList((prev) =>
+        prev.map((patient) => (patient.id === patientId ? existingPatient : patient))
+      );
+    }
   };
 
-  const handleAddTimelineEntry = (patientId: string, entry: TimelineEntry) => {
+  const handleAddTimelineEntry = async (patientId: string, entry: TimelineEntry) => {
+    const existingPatient = patientList.find((patient) => patient.id === patientId);
+    if (!existingPatient) return;
+
+    const optimisticTimeline = [entry, ...existingPatient.timeline].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
     setPatientList((prev) =>
-      prev.map((patient) => {
-        if (patient.id !== patientId) return patient;
-        const timeline = [entry, ...patient.timeline].sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-        return { ...patient, timeline };
-      })
+      prev.map((patient) =>
+        patient.id === patientId ? { ...patient, timeline: optimisticTimeline } : patient
+      )
     );
     try {
-      const patient = patientList.find((p) => p.id === patientId);
-      if (patient) {
-        await fetch(`${API_BASE}/api/patients/${patientId}/timeline`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(entry)
-        });
+      const response = await fetch(`${API_BASE}/api/patients/${patientId}/timeline`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(entry)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
       }
+
+      const persistedEntry = await response.json();
+      setPatientList((prev) =>
+        prev.map((patient) =>
+          patient.id === patientId
+            ? {
+                ...patient,
+                timeline: [persistedEntry, ...patient.timeline.filter((item) => item !== entry)].sort(
+                  (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+                )
+              }
+            : patient
+        )
+      );
     } catch (error) {
       console.error('Failed to persist timeline entry', error);
+      setPatientList((prev) =>
+        prev.map((patient) => (patient.id === patientId ? existingPatient : patient))
+      );
     }
     setTimelineModalState(null);
   };
