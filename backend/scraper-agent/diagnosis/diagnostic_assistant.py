@@ -3,8 +3,12 @@
 
 import re
 from typing import List, Dict, Tuple
-from ..main import ResearchScraper
-from ..config.ai_keywords import AIKeywordGenerator
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from main import ResearchScraper
+from config.ai_keywords import AIKeywordGenerator
 
 class DiagnosticAssistant:
 
