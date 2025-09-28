@@ -54,13 +54,19 @@ class DiagnosticAssistant:
                 # get key findings
                 key_findings = self._extract_key_findings(articles)
 
+                # get medication recommendations
+                medication_recommendations = self._generate_medication_recommendations(
+                    condition, symptom_description
+                )
+
                 # compile results
                 diagnosis_results.append({
                     'diagnosis': condition,
                     'certainty_score': certainty_score,
                     'supporting_evidence': supporting_evidence,
                     'research_articles': len(articles),
-                    'key_findings': key_findings
+                    'key_findings': key_findings,
+                    'medication_recommendations': medication_recommendations
                 })
 
                 print(f"{condition}: {certainty_score:.2f} certainty")
@@ -225,6 +231,171 @@ class DiagnosticAssistant:
             return finding[:200] + "..." if len(finding) > 200 else finding
         else:
             return "Research indicates multiple factors may contribute to this condition"
+
+    def _generate_medication_recommendations(self, condition: str, symptom_description: str) -> List[Dict]:
+        """
+        Generate medication recommendations for a given condition using AI
+        Returns list of medications with dosages and administration details
+        """
+
+        prompt = f"""
+        You are a clinical pharmacist providing medication recommendations for a diagnosed condition.
+
+        Condition: {condition}
+        Patient symptoms: {symptom_description}
+
+        Provide 3-5 evidence-based medication recommendations in JSON format:
+        [
+          {{
+            "medication": "medication name",
+            "dosage": "specific dosage with units",
+            "frequency": "how often to take",
+            "route": "oral/topical/injection/etc",
+            "duration": "typical treatment duration",
+            "indication": "what symptoms/aspect this treats",
+            "monitoring": "what to monitor while on this medication",
+            "contraindications": "important warnings or contraindications"
+          }}
+        ]
+
+        Focus on:
+        - First-line treatments for women
+        - Evidence-based dosing
+        - Safety considerations
+        - Hormone-related considerations when relevant
+
+        Example for PCOS:
+        [
+          {{
+            "medication": "Metformin",
+            "dosage": "500-850 mg",
+            "frequency": "twice daily with meals",
+            "route": "oral",
+            "duration": "long-term",
+            "indication": "insulin resistance and metabolic symptoms",
+            "monitoring": "kidney function, vitamin B12, lactic acidosis symptoms",
+            "contraindications": "kidney disease, liver disease, alcohol abuse"
+          }}
+        ]
+        """
+
+        try:
+            # Use the AI keyword generator's model to get medication recommendations
+            response = self.ai_keywords.model.generate_content(prompt)
+            response_text = response.text.strip()
+
+            # Extract JSON from response
+            import json
+            import re
+
+            # Find JSON array in the response
+            json_match = re.search(r'\[.*?\]', response_text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
+                medications = json.loads(json_str)
+                return medications
+            else:
+                # Fallback to condition-specific defaults
+                return self._get_default_medications(condition)
+
+        except Exception as e:
+            print(f"Error generating medication recommendations: {e}")
+            return self._get_default_medications(condition)
+
+    def _get_default_medications(self, condition: str) -> List[Dict]:
+        """
+        Fallback medication recommendations based on condition
+        """
+
+        condition_lower = condition.lower()
+
+        # Common medications for specific conditions
+        if 'cardiomyopathy' in condition_lower or 'heart' in condition_lower:
+            return [
+                {
+                    "medication": "Lisinopril",
+                    "dosage": "2.5-5 mg",
+                    "frequency": "once daily",
+                    "route": "oral",
+                    "duration": "long-term",
+                    "indication": "heart failure and cardioprotection",
+                    "monitoring": "blood pressure, kidney function, potassium",
+                    "contraindications": "pregnancy, angioedema history"
+                },
+                {
+                    "medication": "Metoprolol",
+                    "dosage": "12.5-25 mg",
+                    "frequency": "twice daily",
+                    "route": "oral",
+                    "duration": "long-term",
+                    "indication": "heart rate control and symptoms",
+                    "monitoring": "heart rate, blood pressure, heart function",
+                    "contraindications": "severe asthma, heart block"
+                }
+            ]
+
+        elif 'embolism' in condition_lower or 'thrombosis' in condition_lower:
+            return [
+                {
+                    "medication": "Rivaroxaban",
+                    "dosage": "15 mg",
+                    "frequency": "twice daily for 21 days, then 20 mg once daily",
+                    "route": "oral",
+                    "duration": "3-6 months minimum",
+                    "indication": "anticoagulation for pulmonary embolism",
+                    "monitoring": "bleeding symptoms, kidney function",
+                    "contraindications": "active bleeding, severe kidney disease"
+                },
+                {
+                    "medication": "Enoxaparin",
+                    "dosage": "1 mg/kg",
+                    "frequency": "twice daily subcutaneous",
+                    "route": "injection",
+                    "duration": "bridge therapy 5-7 days",
+                    "indication": "acute anticoagulation",
+                    "monitoring": "platelet count, bleeding, anti-Xa levels",
+                    "contraindications": "active bleeding, heparin allergy"
+                }
+            ]
+
+        elif 'anxiety' in condition_lower or 'panic' in condition_lower:
+            return [
+                {
+                    "medication": "Sertraline",
+                    "dosage": "25-50 mg",
+                    "frequency": "once daily",
+                    "route": "oral",
+                    "duration": "6-12 months minimum",
+                    "indication": "anxiety and panic symptoms",
+                    "monitoring": "mood, suicidal thoughts, serotonin syndrome",
+                    "contraindications": "MAOI use, severe liver disease"
+                },
+                {
+                    "medication": "Propranolol",
+                    "dosage": "10-40 mg",
+                    "frequency": "as needed for acute symptoms",
+                    "route": "oral",
+                    "duration": "short-term/PRN",
+                    "indication": "physical symptoms of anxiety",
+                    "monitoring": "heart rate, blood pressure",
+                    "contraindications": "asthma, heart block, hypotension"
+                }
+            ]
+
+        else:
+            # Generic supportive care
+            return [
+                {
+                    "medication": "Symptomatic treatment",
+                    "dosage": "as directed",
+                    "frequency": "as needed",
+                    "route": "varies",
+                    "duration": "as needed",
+                    "indication": "symptom management",
+                    "monitoring": "symptom improvement, side effects",
+                    "contraindications": "consult healthcare provider"
+                }
+            ]
 
 # convenience function for quick diagnosis
 def get_probable_diagnoses(symptom_description: str, gemini_api_key: str, max_results: int = 3) -> List[Dict]:
