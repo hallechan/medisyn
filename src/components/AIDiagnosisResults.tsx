@@ -60,7 +60,7 @@ const AIDiagnosisResults: FC<AIDiagnosisResultsProps> = ({
       <div className="appointment-modal-dialog gradient-surface border-0 shadow-lg p-4 p-lg-5 rounded-4" style={{ maxWidth: '800px' }}>
         <div className="d-flex align-items-center justify-content-between mb-4">
           <div>
-            <h3 className="h4 mb-1">🤖 AI-Assisted Diagnosis</h3>
+            <h3 className="h4 mb-1">AI-Assisted Diagnosis</h3>
             <p className="text-muted small mb-0">powered by Gemini AI + PubMed research</p>
           </div>
           <button
@@ -79,9 +79,9 @@ const AIDiagnosisResults: FC<AIDiagnosisResultsProps> = ({
               <span className="visually-hidden">Analyzing symptoms...</span>
             </div>
             <p className="text-muted">
-              🧠 Analyzing symptoms with AI<br />
-              📚 Searching medical research<br />
-              🔬 Calculating certainty scores...
+              Analyzing symptoms with AI<br />
+              Searching medical research<br />
+              Calculating certainty scores...
             </p>
           </div>
         )}
