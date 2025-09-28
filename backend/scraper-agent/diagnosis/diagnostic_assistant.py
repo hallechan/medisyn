@@ -36,9 +36,9 @@ class DiagnosticAssistant:
         for condition in potential_conditions:
             print(f"\nResearching: {condition}")
 
-            # get research articles for this condition
+            # get research articles for this condition (reduced for speed)
             research_query = f"{condition} diagnosis symptoms women"
-            articles = self.scraper.search_with_ai(research_query, max_results=5)
+            articles = self.scraper.search_with_ai(research_query, max_results=2)  # Reduced from 5 to 2
 
             if articles:
                 # analyze how well symptoms match this condition
@@ -55,9 +55,17 @@ class DiagnosticAssistant:
                 key_findings = self._extract_key_findings(articles)
 
                 # get medication recommendations
-                medication_recommendations = self._generate_medication_recommendations(
-                    condition, symptom_description
-                )
+                try:
+                    medication_recommendations = self._generate_medication_recommendations(
+                        condition, symptom_description
+                    )
+                    if not medication_recommendations:
+                        # Fallback to default if AI fails
+                        medication_recommendations = self._get_default_medications(condition)
+                except Exception as e:
+                    print(f"Error generating AI medications for {condition}: {e}")
+                    # Use default medications as fallback
+                    medication_recommendations = self._get_default_medications(condition)
 
                 # compile results
                 diagnosis_results.append({
@@ -375,23 +383,28 @@ class DiagnosticAssistant:
         """
 
         try:
+            # Skip AI generation for now and use defaults directly
+            # TODO: Re-enable AI generation when performance is optimized
+            print(f"Using default medications for {condition} (AI generation disabled for speed)")
+            return self._get_default_medications(condition)
+
             # Use the AI keyword generator's model to get medication recommendations
-            response = self.ai_keywords.model.generate_content(prompt)
-            response_text = response.text.strip()
+            # response = self.ai_keywords.model.generate_content(prompt)
+            # response_text = response.text.strip()
 
             # Extract JSON from response
-            import json
-            import re
+            # import json
+            # import re
 
             # Find JSON array in the response
-            json_match = re.search(r'\[.*?\]', response_text, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(0)
-                medications = json.loads(json_str)
-                return medications
-            else:
-                # Fallback to condition-specific defaults
-                return self._get_default_medications(condition)
+            # json_match = re.search(r'\[.*?\]', response_text, re.DOTALL)
+            # if json_match:
+            #     json_str = json_match.group(0)
+            #     medications = json.loads(json_str)
+            #     return medications
+            # else:
+            #     # Fallback to condition-specific defaults
+            #     return self._get_default_medications(condition)
 
         except Exception as e:
             print(f"Error generating medication recommendations: {e}")
