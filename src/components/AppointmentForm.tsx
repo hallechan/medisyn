@@ -1,11 +1,13 @@
 import { FC, useEffect, useState } from 'react';
 import type { AppointmentDraft } from '../types';
+import AIDiagnosisResults from './AIDiagnosisResults';
 import WebcamStream from './WebcamStream';
 
 interface AppointmentFormProps {
   isOpen: boolean;
   onClose: () => void;
   patientName?: string;
+  patientAge?: number;
   draft?: AppointmentDraft;
   onSaveDraft: (draft: AppointmentDraft) => void;
   onPublish: (draft: AppointmentDraft) => void;
@@ -39,6 +41,7 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
   isOpen,
   onClose,
   patientName,
+  patientAge,
   draft,
   onSaveDraft,
   onPublish,
@@ -72,6 +75,12 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     }
     return parts.join(' ');
   };
+
+  // AI Diagnosis states
+  const [showAIDiagnosis, setShowAIDiagnosis] = useState(false);
+  const [aiDiagnosisData, setAiDiagnosisData] = useState<any>(null);
+  const [aiDiagnosisLoading, setAiDiagnosisLoading] = useState(false);
+  const [aiDiagnosisError, setAiDiagnosisError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -124,6 +133,58 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
   // snapshot handler receives the **current values from the webcam** directly
   const handleSnapshot = (snapshot: { emotion: string; redness: number; imageData: string }) => {
     setSnapshots((prev) => [...prev, snapshot]);
+  };
+
+  const handleAIDiagnosis = async () => {
+    // Validate that we have symptom summary
+    if (!form.symptomSummary || form.symptomSummary.trim() === '') {
+      alert('Please enter a symptom summary before requesting AI diagnosis.');
+      return;
+    }
+
+    setAiDiagnosisLoading(true);
+    setAiDiagnosisError(null);
+    setShowAIDiagnosis(true);
+
+    try {
+      // Get the latest redness score from webcam snapshots
+      const latestRednessScore = snapshots.length > 0 ? snapshots[snapshots.length - 1].redness : undefined;
+
+      const response = await fetch('http://localhost:4000/api/ai-diagnosis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          symptomSummary: form.symptomSummary,
+          appointmentType: form.appointmentType,
+          weightKg: form.weightKg,
+          heightCm: form.heightCm,
+          heartbeatBpm: form.heartbeatBpm,
+          bloodPressureSystolic: form.bloodPressureSystolic,
+          bloodPressureDiastolic: form.bloodPressureDiastolic,
+          temperatureC: form.temperatureC,
+          spo2Percent: form.spo2Percent,
+          rednessScore: latestRednessScore,
+          diagnosticFocus: form.diagnosticFocus,
+          notes: form.notes,
+          patientAge: patientAge
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to get AI diagnosis');
+      }
+
+      const data = await response.json();
+      setAiDiagnosisData(data);
+    } catch (error) {
+      console.error('AI diagnosis error:', error);
+      setAiDiagnosisError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setAiDiagnosisLoading(false);
+    }
   };
 
   return (
@@ -339,6 +400,45 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
             </div>
           </div>
 
+          {/* AI Diagnosis */}
+          <div className="gradient-panel rounded-4 p-4">
+            <div className="d-flex gap-3 gap-lg-4 align-items-start">
+              <i className="bi bi-robot fs-4 text-brand-secondary" />
+              <div className="d-flex flex-column flex-grow-1 gap-2">
+                <div>
+                  <strong>AI-assisted diagnosis</strong>
+                  <div className="text-muted small">
+                    get evidence-based diagnostic suggestions powered by Gemini AI and PubMed research.
+                  </div>
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-gradient btn-sm"
+                    onClick={handleAIDiagnosis}
+                    disabled={!form.symptomSummary || form.symptomSummary.trim() === '' || aiDiagnosisLoading}
+                  >
+                    {aiDiagnosisLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+                        analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-brain me-1" /> get AI diagnosis
+                      </>
+                    )}
+                  </button>
+                  {form.symptomSummary && form.symptomSummary.trim() === '' && (
+                    <span className="text-muted small align-self-center">
+                      enter symptoms first
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Diagnostic Focus */}
           <div>
             <label className="form-label">add diagnostic focus areas</label>
@@ -403,6 +503,19 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
           </div>
         </form>
       </div>
+
+      {/* AI Diagnosis Results Modal */}
+      <AIDiagnosisResults
+        isOpen={showAIDiagnosis}
+        onClose={() => {
+          setShowAIDiagnosis(false);
+          setAiDiagnosisData(null);
+          setAiDiagnosisError(null);
+        }}
+        diagnosisData={aiDiagnosisData}
+        isLoading={aiDiagnosisLoading}
+        error={aiDiagnosisError}
+      />
     </div>
   );
 };
