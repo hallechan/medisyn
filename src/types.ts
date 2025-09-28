@@ -80,6 +80,10 @@ export interface AppointmentDraft {
   duration: string;
   weightKg?: number;
   heightCm?: number;
+  bloodPressureSystolic?: number;
+  bloodPressureDiastolic?: number;
+  spo2Percent?: number;
+  temperatureC?: number;
   notes: string;
   diagnosticFocus: string[];
   heartbeatBpm?: number;

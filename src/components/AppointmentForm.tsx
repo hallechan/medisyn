@@ -2,6 +2,7 @@
 import { FC, useEffect, useState } from 'react';
 import type { AppointmentDraft } from '../types';
 import AIDiagnosisResults from './AIDiagnosisResults';
+import WebcamStream from './WebcamStream';
 
 
 interface AppointmentFormProps {
@@ -22,6 +23,10 @@ const defaultDraft: AppointmentDraft = {
   duration: '45 minutes',
   weightKg: undefined,
   heightCm: undefined,
+  bloodPressureSystolic: undefined,
+  bloodPressureDiastolic: undefined,
+  spo2Percent: undefined,
+  temperatureC: undefined,
   notes: '',
   diagnosticFocus: [],
   heartbeatBpm: undefined
@@ -48,6 +53,33 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
 }) => {
   const [form, setForm] = useState<AppointmentDraft>(draft ?? defaultDraft);
   const [focusInput, setFocusInput] = useState('');
+  const [snapshots, setSnapshots] = useState<
+    { emotion: string; redness: number; imageData: string }[]
+  >([]);
+
+  const getDurationParts = (value?: string) => {
+    if (!value) {
+      return { hours: '', minutes: '' };
+    }
+    const hoursMatch = value.match(/(\d+)\s*(?:h|hour|hours)/i);
+    const minutesMatch = value.match(/(\d+)\s*(?:m|min|minute|minutes)/i);
+    return {
+      hours: hoursMatch ? hoursMatch[1] : '',
+      minutes: minutesMatch ? minutesMatch[1] : ''
+    };
+  };
+
+  const formatDuration = (hoursValue?: number, minutesValue?: number) => {
+    const parts: string[] = [];
+    if (hoursValue != null && !Number.isNaN(hoursValue)) {
+      parts.push(`${hoursValue}h`);
+    }
+    if (minutesValue != null && !Number.isNaN(minutesValue)) {
+      parts.push(`${minutesValue}m`);
+    }
+    return parts.join(' ');
+  };
+
 
   // AI Diagnosis states
   const [showAIDiagnosis, setShowAIDiagnosis] = useState(false);
@@ -99,9 +131,7 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     };
   }, [isOpen, draft]);
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
   const updateForm = (patch: Partial<AppointmentDraft>) => {
     setForm((prev) => ({ ...prev, ...patch }));
@@ -109,9 +139,7 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
 
   const addFocus = () => {
     const trimmed = focusInput.trim();
-    if (!trimmed || form.diagnosticFocus.includes(trimmed)) {
-      return;
-    }
+    if (!trimmed || form.diagnosticFocus.includes(trimmed)) return;
     setForm((prev) => ({
       ...prev,
       diagnosticFocus: [...prev.diagnosticFocus, trimmed]
@@ -136,6 +164,13 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     onClose();
   };
 
+  const durationParts = getDurationParts(form.duration);
+
+  // snapshot handler receives the **current values from the webcam** directly
+  const handleSnapshot = (snapshot: { emotion: string; redness: number; imageData: string }) => {
+    setSnapshots((prev) => [...prev, snapshot]);
+  };
+
   const handleAIDiagnosis = async () => {
     // Validate that we have symptom summary
     if (!form.symptomSummary || form.symptomSummary.trim() === '') {
@@ -148,7 +183,7 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     setShowAIDiagnosis(true);
 
     try {
-      const response = await fetch('http://localhost:4001/api/ai-diagnosis', {
+      const response = await fetch('http://localhost:4000/api/ai-diagnosis', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -180,6 +215,13 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     }
   };
 
+
+    // setAiDiagnosisLoading(true);
+    // setAiDiagnosisError(null);
+    // setShowAIDiagnosis(true);
+
+ 
+
   return (
     <div className="appointment-modal-overlay" role="dialog" aria-modal="true">
       <div className="appointment-modal-backdrop" onClick={onClose} />
@@ -198,6 +240,7 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
             <i className="bi bi-x-lg" />
           </button>
         </div>
+
         <form
           className="d-grid gap-4"
           onSubmit={(event) => {
@@ -205,13 +248,14 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
             handlePublish();
           }}
         >
+          {/* Appointment details */}
           <div className="row g-4">
-            <div className="col-12 col-lg-6">
+            <div className="col-12 col-lg-9">
               <label className="form-label">appointment type</label>
               <select
                 className="form-select rounded-3 token-input"
                 value={form.appointmentType}
-                onChange={(event) => updateForm({ appointmentType: event.target.value })}
+                onChange={(e) => updateForm({ appointmentType: e.target.value })}
               >
                 <option>comprehensive consult</option>
                 <option>cycle-aligned follow-up</option>
@@ -219,18 +263,44 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                 <option>telehealth check-in</option>
               </select>
             </div>
-            <div className="col-6 col-lg-3">
+            <div className="col-12 col-lg-3">
               <label className="form-label">duration</label>
-              <select
-                className="form-select rounded-3 token-input"
-                value={form.duration}
-                onChange={(event) => updateForm({ duration: event.target.value })}
-              >
-                <option>45 minutes</option>
-                <option>30 minutes</option>
-                <option>60 minutes</option>
-              </select>
+              <div className="d-flex align-items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  className="form-control rounded-3 token-input flex-grow-1"
+                  placeholder="hours"
+                  value={durationParts.hours}
+                  onChange={(event) => {
+                    const hoursValue = event.target.value;
+                    const hours = hoursValue === '' ? undefined : Number(hoursValue);
+                    if (hours != null && (Number.isNaN(hours) || hours < 0)) return;
+                    const minutes = durationParts.minutes === '' ? undefined : Number(durationParts.minutes);
+                    const duration = formatDuration(hours, minutes);
+                    updateForm({ duration: duration || '' });
+                  }}
+                />
+                <span className="text-muted fw-semibold">/</span>
+                <input
+                  type="number"
+                  min={0}
+                  className="form-control rounded-3 token-input flex-grow-1"
+                  placeholder="minutes"
+                  value={durationParts.minutes}
+                  onChange={(event) => {
+                    const minutesValue = event.target.value;
+                    const minutes = minutesValue === '' ? undefined : Number(minutesValue);
+                    if (minutes != null && (Number.isNaN(minutes) || minutes < 0)) return;
+                    const hours = durationParts.hours === '' ? undefined : Number(durationParts.hours);
+                    const duration = formatDuration(hours, minutes);
+                    updateForm({ duration: duration || '' });
+                  }}
+                />
+              </div>
             </div>
+          </div>
+          <div className="row g-4">
             <div className="col-6 col-lg-3">
               <label className="form-label">heartbeat (bpm)</label>
               <input
@@ -238,12 +308,63 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                 className="form-control rounded-3 token-input"
                 placeholder="e.g. 82"
                 value={form.heartbeatBpm ?? ''}
+                onChange={(e) =>
+                  updateForm({ heartbeatBpm: Number(e.target.value) || undefined })
+                }
+              />
+            </div>
+            <div className="col-6 col-lg-3">
+              <label className="form-label">blood pressure (mmHg)</label>
+              <div className="d-flex align-items-center gap-2">
+                <input
+                  type="number"
+                  className="form-control rounded-3 token-input flex-grow-1"
+                  placeholder="systolic"
+                  value={form.bloodPressureSystolic ?? ''}
+                  onChange={(event) =>
+                    updateForm({ bloodPressureSystolic: Number(event.target.value) || undefined })
+                  }
+                />
+                <span className="text-muted fw-semibold">/</span>
+                <input
+                  type="number"
+                  className="form-control rounded-3 token-input flex-grow-1"
+                  placeholder="diastolic"
+                  value={form.bloodPressureDiastolic ?? ''}
+                  onChange={(event) =>
+                    updateForm({ bloodPressureDiastolic: Number(event.target.value) || undefined })
+                  }
+                />
+              </div>
+            </div>
+            <div className="col-6 col-lg-3">
+              <label className="form-label">spo₂ (%)</label>
+              <input
+                type="number"
+                className="form-control rounded-3 token-input"
+                placeholder="e.g. 98"
+                value={form.spo2Percent ?? ''}
                 onChange={(event) =>
-                  updateForm({ heartbeatBpm: Number(event.target.value) || undefined })
+                  updateForm({ spo2Percent: Number(event.target.value) || undefined })
+                }
+              />
+            </div>
+            <div className="col-6 col-lg-3">
+              <label className="form-label">temperature (°c)</label>
+              <input
+                type="number"
+                step="0.1"
+                className="form-control rounded-3 token-input"
+                placeholder="e.g. 36.8"
+                value={form.temperatureC ?? ''}
+                onChange={(event) =>
+                  updateForm({ temperatureC: Number(event.target.value) || undefined })
                 }
               />
             </div>
           </div>
+
+          {/* Symptom overview */}
           <div>
             <label className="form-label">symptom overview</label>
             <textarea
@@ -251,9 +372,11 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
               rows={3}
               placeholder="note cycle phase, onset, severity, and triggers."
               value={form.symptomSummary}
-              onChange={(event) => updateForm({ symptomSummary: event.target.value })}
+              onChange={(e) => updateForm({ symptomSummary: e.target.value })}
             />
           </div>
+
+          {/* Weight / Height */}
           <div className="row g-4">
             <div className="col-6">
               <label className="form-label">weight (kg)</label>
@@ -262,7 +385,9 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                 className="form-control rounded-3 token-input"
                 placeholder="e.g. 68"
                 value={form.weightKg ?? ''}
-                onChange={(event) => updateForm({ weightKg: Number(event.target.value) || undefined })}
+                onChange={(e) =>
+                  updateForm({ weightKg: Number(e.target.value) || undefined })
+                }
               />
             </div>
             <div className="col-6">
@@ -272,8 +397,41 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                 className="form-control rounded-3 token-input"
                 placeholder="e.g. 172"
                 value={form.heightCm ?? ''}
-                onChange={(event) => updateForm({ heightCm: Number(event.target.value) || undefined })}
+                onChange={(e) =>
+                  updateForm({ heightCm: Number(e.target.value) || undefined })
+                }
               />
+            </div>
+          </div>
+
+          {/* Webcam */}
+          <div className="gradient-panel rounded-4 p-4 mt-3 text-center">
+            <h6>Live Webcam Feed</h6>
+            <WebcamStream
+              width={600}
+              height={500}
+              onSnapshot={handleSnapshot} // passes emotion/redness/frame at snapshot
+            />
+          </div>
+
+          {/* Snapshots */}
+          <div className="mt-3">
+            <h6>Saved Snapshots</h6>
+            {snapshots.length === 0 && <p className="text-muted small">No snapshots yet.</p>}
+            <div className="d-flex flex-wrap gap-2">
+              {snapshots.map((snap, i) => (
+                <div key={i} className="snapshot-card border rounded p-1" style={{ width: 100, textAlign: 'center' }}>
+                  <img
+                    src={`data:image/jpeg;base64,${snap.imageData}`}
+                    alt={`snapshot-${i}`}
+                    style={{ width: '100%', borderRadius: 4 }}
+                  />
+                  <div className="small mt-1">
+                    <div>Emotion: {snap.emotion}</div>
+                    <div>Redness: {snap.redness.toFixed(1)}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
           <div className="gradient-panel rounded-4 p-4">
@@ -298,10 +456,11 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                     <span>measuring...</span>
                   </div>
                 )}
+              </div>
                 <div className="mt-2">
                   {temperature !== null && (
                     <>
-                      <span className="fw-bold">Temperature: {temperature.toFixed(2)} °C</span>
+                      <span className="fw-bold">temperature: {temperature.toFixed(2)} °C</span>
                       <br />
                       {(() => {
                         if (temperature >= 22 && temperature <= 35) {
@@ -320,38 +479,8 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                 </div>
               </div>
             </div>
-          </div>
-          <div className="gradient-panel rounded-4 p-4">
-            <div className="d-flex gap-3 gap-lg-4 align-items-start">
-              <i className="bi bi-capsule fs-4 text-brand-secondary" />
-              <div className="d-flex flex-column flex-grow-1 gap-2">
-                <div>
-                  <strong>manage medications</strong>
-                  <div className="text-muted small">add prescriptions, refills, or discontinue therapy directly from this appointment.</div>
-                </div>
-                <div className="d-flex gap-2">
-                  <button type="button" className="btn btn-gradient btn-sm" onClick={onManageMedications}>
-                    <i className="bi bi-plus-circle me-1" /> add
-                  </button>
-                  <button type="button" className="btn btn-gradient btn-sm" onClick={onManageMedications}>
-                    <i className="bi bi-arrow-repeat me-1" /> refill
-                  </button>
-                  <button type="button" className="btn btn-gradient btn-sm" onClick={onManageMedications}>
-                    <i className="bi bi-x-circle me-1" /> discontinue
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="gradient-panel rounded-4 p-4">
-            <div className="d-flex gap-3 gap-lg-4">
-              <i className="bi bi-camera-video fs-4 text-brand-secondary" />
-              <div>
-                <strong>todo:</strong> launch cv intake for skin, edema, and posture checks.
-                <div className="text-muted small">route uploads to the cv microservice for multi-angle review.</div>
-              </div>
-            </div>
-          </div>
+
+          {/* AI Diagnosis */}
           <div className="gradient-panel rounded-4 p-4">
             <div className="d-flex gap-3 gap-lg-4 align-items-start">
               <i className="bi bi-robot fs-4 text-brand-secondary" />
@@ -389,6 +518,8 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Diagnostic Focus */}
           <div>
             <label className="form-label">add diagnostic focus areas</label>
             <div className="input-group rounded-3 overflow-hidden gradient-panel">
@@ -397,10 +528,10 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                 placeholder="e.g. cardiomyopathy recovery, luteal shift"
                 list="focus-suggestions"
                 value={focusInput}
-                onChange={(event) => setFocusInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
+                onChange={(e) => setFocusInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
                     addFocus();
                   }
                 }}
@@ -410,8 +541,8 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
               </button>
             </div>
             <datalist id="focus-suggestions">
-              {FOCUS_SUGGESTIONS.map((suggestion) => (
-                <option key={suggestion} value={suggestion} />
+              {FOCUS_SUGGESTIONS.map((s) => (
+                <option key={s} value={s} />
               ))}
             </datalist>
             <div className="d-flex flex-wrap gap-3 mt-3">
@@ -426,11 +557,11 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                   />
                 </span>
               ))}
-              {form.diagnosticFocus.length === 0 && (
-                <span className="text-muted small">no focus areas added yet.</span>
-              )}
+              {form.diagnosticFocus.length === 0 && <span className="text-muted small">no focus areas added yet.</span>}
             </div>
           </div>
+
+          {/* Clinician Notes */}
           <div>
             <label className="form-label">clinician notes</label>
             <textarea
@@ -438,10 +569,11 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
               rows={3}
               placeholder="outline labs, imaging, or consults."
               value={form.notes}
-              onChange={(event) => updateForm({ notes: event.target.value })}
+              onChange={(e) => updateForm({ notes: e.target.value })}
             />
           </div>
-          <div className="d-flex gap-3 justify-content-end">
+
+          <div className="d-flex gap-3 justify-content-end mt-3">
             <button type="button" className="btn gradient-ghost text-brand-secondary border-0" onClick={handleSaveDraft}>
               save draft
             </button>
@@ -451,19 +583,19 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
           </div>
         </form>
       </div>
-
-      {/* AI Diagnosis Results Modal */}
-      <AIDiagnosisResults
-        isOpen={showAIDiagnosis}
-        onClose={() => {
-          setShowAIDiagnosis(false);
-          setAiDiagnosisData(null);
-          setAiDiagnosisError(null);
-        }}
-        diagnosisData={aiDiagnosisData}
-        isLoading={aiDiagnosisLoading}
-        error={aiDiagnosisError}
-      />
+        
+        {/* AI Diagnosis Results Modal */}
+        <AIDiagnosisResults
+          isOpen={showAIDiagnosis}
+          onClose={() => {
+            setShowAIDiagnosis(false);
+            setAiDiagnosisData(null);
+            setAiDiagnosisError(null);
+          }}
+          diagnosisData={aiDiagnosisData}
+          isLoading={aiDiagnosisLoading}
+          error={aiDiagnosisError}
+        />
     </div>
   );
 };

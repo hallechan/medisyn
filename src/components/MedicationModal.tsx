@@ -89,7 +89,7 @@ const MedicationModal: FC<MedicationModalProps> = ({ isOpen, onClose, medication
                 <div className="col-12 col-md-2 text-center">
                   <img src={resolveMedicationIcon(med)} alt="preview" className="med-icon" />
                 </div>
-                <div className="col-12 col-md-3">
+                <div className="col-12 col-md-9">
                   <label className="form-label">medication</label>
                   <input
                     className="form-control token-input"
@@ -97,7 +97,18 @@ const MedicationModal: FC<MedicationModalProps> = ({ isOpen, onClose, medication
                     onChange={(event) => updateMedication(index, 'name', event.target.value)}
                   />
                 </div>
-                <div className="col-6 col-md-2">
+                <div className="col-12 col-md-1 d-flex justify-content-end align-items-end">
+                  <button
+                    type="button"
+                    className="btn btn-gradient btn-sm rounded-circle text-white d-inline-flex align-items-center justify-content-center"
+                    style={{ width: 32, height: 32 }}
+                    onClick={() => removeMedication(index)}
+                    aria-label={`Remove ${med.name || 'medication'}`}
+                  >
+                    <i className="bi bi-x" />
+                  </button>
+                </div>
+                <div className="col-6 col-md-3">
                   <label className="form-label">dosage</label>
                   <input
                     className="form-control token-input"
@@ -105,7 +116,7 @@ const MedicationModal: FC<MedicationModalProps> = ({ isOpen, onClose, medication
                     onChange={(event) => updateMedication(index, 'dosage', event.target.value)}
                   />
                 </div>
-                <div className="col-6 col-md-2">
+                <div className="col-6 col-md-3">
                   <label className="form-label">schedule</label>
                   <input
                     className="form-control token-input"
@@ -113,7 +124,7 @@ const MedicationModal: FC<MedicationModalProps> = ({ isOpen, onClose, medication
                     onChange={(event) => updateMedication(index, 'schedule', event.target.value)}
                   />
                 </div>
-                <div className="col-6 col-md-2">
+                <div className="col-6 col-md-3">
                   <label className="form-label">type</label>
                   <select
                     className="form-select token-input"
@@ -127,7 +138,7 @@ const MedicationModal: FC<MedicationModalProps> = ({ isOpen, onClose, medication
                     ))}
                   </select>
                 </div>
-                <div className="col-6 col-md-2">
+                <div className="col-6 col-md-3">
                   <label className="form-label">adherence</label>
                   <select
                     className="form-select token-input"
@@ -140,17 +151,6 @@ const MedicationModal: FC<MedicationModalProps> = ({ isOpen, onClose, medication
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="col-12 text-end">
-                  <button
-                    type="button"
-                    className="btn btn-gradient btn-sm rounded-circle text-white d-inline-flex align-items-center justify-content-center"
-                    style={{ width: 32, height: 32 }}
-                    onClick={() => removeMedication(index)}
-                    aria-label={`Remove ${med.name || 'medication'}`}
-                  >
-                    <i className="bi bi-x" />
-                  </button>
                 </div>
               </div>
             </div>

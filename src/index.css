@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;600&display=swap');
 @import 'bootstrap/dist/css/bootstrap.min.css';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 
@@ -23,6 +24,7 @@ body {
   background-size: cover, 220px;
   background-attachment: fixed;
   font-family: 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  font-size: var(--body-font-size, 1rem);
 }
 
 #root {
@@ -263,4 +265,58 @@ a {
   rotate: -10deg;
   object-fit: contain;
   padding: 8px;
+}
+
+/* accessibility themes */
+body.access-colorblind-safe {
+  --brand-primary: #1b998b;
+  --brand-secondary: #2d4263;
+  background-image: linear-gradient(180deg, rgba(210, 233, 247, 0.9) 0%, rgba(199, 235, 220, 0.9) 40%, rgba(255, 255, 255, 0.95) 100%), url('/noise.gif');
+}
+
+body.access-high-contrast {
+  --surface-top: rgba(255, 255, 255, 1);
+  --surface-bottom: rgba(242, 242, 242, 1);
+  --surface-highlight: rgba(255, 255, 255, 1);
+  --surface-shadow: rgba(0, 0, 0, 0.16);
+  color: #0b0b0b;
+  background-image: linear-gradient(180deg, rgba(245, 245, 245, 1) 0%, rgba(230, 230, 230, 1) 100%), none;
+}
+
+body.access-high-contrast .gradient-surface {
+  background: linear-gradient(135deg, #ffffff 0%, #f2f2f2 100%);
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+body.access-high-contrast .gradient-panel,
+body.access-high-contrast .gradient-ghost {
+  background: linear-gradient(135deg, #ffffff 0%, #ededed 100%);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+body.access-dyslexia-font {
+  font-family: 'Atkinson Hyperlegible', 'Space Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  letter-spacing: 0.02em;
+  word-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+body.access-large-text {
+  --body-font-size: 1.08rem;
+}
+
+body.access-large-text .section-title {
+  font-size: 0.88rem;
+}
+
+body.access-reduced-motion *,
+body.access-reduced-motion *::before,
+body.access-reduced-motion *::after {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+}
+
+body.access-reduced-motion {
+  scroll-behavior: auto !important;
 }
