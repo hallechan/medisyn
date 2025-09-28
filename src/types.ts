@@ -1,4 +1,4 @@
-export type VitalStatus = 'stable' | 'elevated' | 'critical' | 'unknown';
+export type VitalStatus = 'stable' | 'elevated' | 'critical' | 'unknown' | 'measured' | 'unstable';
 
 export interface VitalSign {
   label: string;
