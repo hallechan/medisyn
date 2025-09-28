@@ -35,7 +35,7 @@ const PatientSidebar: FC<PatientSidebarProps> = ({ patients, activePatientId, on
       </button>
       <div className="d-flex align-items-center justify-content-between">
         <h2 className="h6 text-muted mb-0">patients</h2>
-        <span className="badge bg-brand-primary text-white">{patients.length}</span>
+        <span className="badge text-black">{patients.length} total</span>
       </div>
       <div className="input-group rounded-pill gradient-panel border-0">
         <span className="input-group-text border-0 bg-transparent">

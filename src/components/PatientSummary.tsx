@@ -29,7 +29,6 @@ const PatientSummary: FC<PatientSummaryProps> = ({ patient, onStartAppointment, 
               <span className="badge bg-brand-secondary text-white">{patient.specialty}</span>
               <span className="badge badge-soft">{patient.pronouns}</span>
             </div>
-            {patient.notes && <p className="text-muted mb-3">{patient.notes}</p>}
             <div className="d-flex flex-wrap gap-4">
               <div>
                 <span className="section-title d-block">age</span>
