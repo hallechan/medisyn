@@ -79,9 +79,11 @@ app.get('/api/patients/:id', async (req, res) => {
 
 app.post('/api/patients', async (req, res) => {
   try {
-    const patient = await Patient.create(req.body);
+    const { id: _ignoredId, ...payload } = req.body;
+    const patient = await Patient.create(payload);
     res.status(201).json(normalizePatient(patient.toObject({ virtuals: true })));
   } catch (error) {
+    console.error('Failed to create patient', error);
     res.status(400).json({ message: 'Failed to create patient', error });
   }
 });

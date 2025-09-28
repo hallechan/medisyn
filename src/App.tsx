@@ -127,19 +127,32 @@ function App() {
   }, [accessibilityPreferences]);
 
   const handleAddPatient = async (newPatient: (typeof seedPatients)[number]) => {
+    const { id: _ignoredId, ...payload } = newPatient;
     try {
       const response = await fetch(`${API_BASE}/api/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPatient)
+        body: JSON.stringify(payload)
       });
-      const created = response.ok ? await response.json() : newPatient;
+      if (!response.ok) {
+        let details: unknown;
+        try {
+          details = await response.json();
+        } catch (_error) {
+          details = null;
+        }
+        throw new Error(
+          typeof details === 'object' && details && 'message' in details
+            ? String((details as { message: string }).message)
+            : `Request failed with status ${response.status}`
+        );
+      }
+      const created = await response.json();
       setPatientList((prev) => [...prev, created]);
       setActivePatientId(created.id);
     } catch (error) {
-      console.error('Failed to create patient via API, storing locally', error);
-      setPatientList((prev) => [...prev, newPatient]);
-      setActivePatientId(newPatient.id);
+      console.error('Failed to create patient via API', error);
+      window.alert('Unable to save the new patient to the server. Please retry once the API is available.');
     } finally {
       setIsAddPatientOpen(false);
       setIsSidebarOpen(false);

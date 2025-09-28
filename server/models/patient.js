@@ -111,7 +111,7 @@ patientSchema.set('toJSON', {
   virtuals: true,
   versionKey: false,
   transform: (_doc, ret) => {
-    ret.id = ret._id;
+    ret.id = ret._id?.toString();
     delete ret._id;
     return ret;
   }
