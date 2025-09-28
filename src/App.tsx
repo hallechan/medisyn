@@ -6,11 +6,22 @@ import DiagnosticsPanel from './components/DiagnosticsPanel';
 import AppointmentForm from './components/AppointmentForm';
 import AddPatientModal from './components/AddPatientModal';
 import MedicationModal from './components/MedicationModal';
+import SettingsModal, { type AccessibilityPreferences } from './components/SettingsModal';
 import AppointmentHistoryModal from './components/AppointmentHistoryModal';
 import TimelineEventModal from './components/TimelineEventModal';
 import TimelineDetailModal from './components/TimelineDetailModal';
 import { patients as seedPatients } from './data/patients';
-import type { AppointmentDraft, Medication, TimelineEntry } from './types';
+import type { AppointmentDraft, Medication, TimelineEntry, VitalStatus } from './types';
+
+const ACCESSIBILITY_STORAGE_KEY = 'medisyn-accessibility-preferences';
+
+const DEFAULT_ACCESSIBILITY_PREFERENCES: AccessibilityPreferences = {
+  colorblindSafePalette: false,
+  highContrastMode: false,
+  dyslexiaFriendlyFont: false,
+  reducedMotion: false,
+  largeText: false
+};
 
 function App() {
   const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
@@ -27,6 +38,26 @@ function App() {
     { patientId: string; category: TimelineEntry['category'] } | null
   >(null);
   const [viewTimelineEntry, setViewTimelineEntry] = useState<TimelineEntry | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  const loadPreferences = () => {
+    if (typeof window === 'undefined') {
+      return DEFAULT_ACCESSIBILITY_PREFERENCES;
+    }
+    try {
+      const stored = window.localStorage.getItem(ACCESSIBILITY_STORAGE_KEY);
+      if (!stored) {
+        return DEFAULT_ACCESSIBILITY_PREFERENCES;
+      }
+      const parsed = JSON.parse(stored) as Partial<AccessibilityPreferences>;
+      return { ...DEFAULT_ACCESSIBILITY_PREFERENCES, ...parsed };
+    } catch (error) {
+      console.warn('Failed to parse accessibility preferences, using defaults.', error);
+      return DEFAULT_ACCESSIBILITY_PREFERENCES;
+    }
+  };
+
+  const [accessibilityPreferences, setAccessibilityPreferences] = useState<AccessibilityPreferences>(loadPreferences);
 
   const activePatient = useMemo(
     () => patientList.find((patient) => patient.id === activePatientId) ?? patientList[0],
@@ -63,20 +94,65 @@ function App() {
     }
   }, [returnToAppointment, medicationPatientId]);
 
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return;
+    }
+
+    const classMap: Record<keyof AccessibilityPreferences, string> = {
+      colorblindSafePalette: 'access-colorblind-safe',
+      highContrastMode: 'access-high-contrast',
+      dyslexiaFriendlyFont: 'access-dyslexia-font',
+      reducedMotion: 'access-reduced-motion',
+      largeText: 'access-large-text'
+    };
+
+    const body = document.body;
+
+    (Object.entries(classMap) as Array<[keyof AccessibilityPreferences, string]>).forEach(([key, className]) => {
+      if (accessibilityPreferences[key]) {
+        body.classList.add(className);
+      } else {
+        body.classList.remove(className);
+      }
+    });
+
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(ACCESSIBILITY_STORAGE_KEY, JSON.stringify(accessibilityPreferences));
+      }
+    } catch (error) {
+      console.warn('Failed to persist accessibility preferences.', error);
+    }
+  }, [accessibilityPreferences]);
+
   const handleAddPatient = async (newPatient: (typeof seedPatients)[number]) => {
+    const { id: _ignoredId, ...payload } = newPatient;
     try {
       const response = await fetch(`${API_BASE}/api/patients`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newPatient)
+        body: JSON.stringify(payload)
       });
-      const created = response.ok ? await response.json() : newPatient;
+      if (!response.ok) {
+        let details: unknown;
+        try {
+          details = await response.json();
+        } catch (_error) {
+          details = null;
+        }
+        throw new Error(
+          typeof details === 'object' && details && 'message' in details
+            ? String((details as { message: string }).message)
+            : `Request failed with status ${response.status}`
+        );
+      }
+      const created = await response.json();
       setPatientList((prev) => [...prev, created]);
       setActivePatientId(created.id);
     } catch (error) {
-      console.error('Failed to create patient via API, storing locally', error);
-      setPatientList((prev) => [...prev, newPatient]);
-      setActivePatientId(newPatient.id);
+      console.error('Failed to create patient via API', error);
+      window.alert('Unable to save the new patient to the server. Please retry once the API is available.');
     } finally {
       setIsAddPatientOpen(false);
       setIsSidebarOpen(false);
@@ -108,6 +184,11 @@ function App() {
     if (draft.heartbeatBpm != null) metadata.heartbeat = `${draft.heartbeatBpm} bpm`;
     if (draft.weightKg != null) metadata.weight = `${draft.weightKg} kg`;
     if (draft.heightCm != null) metadata.height = `${draft.heightCm} cm`;
+    if (draft.bloodPressureSystolic != null && draft.bloodPressureDiastolic != null) {
+      metadata.bloodPressure = `${draft.bloodPressureSystolic}/${draft.bloodPressureDiastolic} mmHg`;
+    }
+    if (draft.spo2Percent != null) metadata.spo2 = `${draft.spo2Percent} %`;
+    if (draft.temperatureC != null) metadata.temperature = `${draft.temperatureC} °C`;
 
     const timelineEntry: TimelineEntry = {
       date: newHistoryEntry.date,
@@ -130,13 +211,41 @@ function App() {
         return { ...series, points: cappedPoints };
       });
 
-      const updatedVitals = draft.heartbeatBpm
-        ? existingPatient.vitals.map((vital) =>
-            vital.label === 'heart rate'
-              ? { ...vital, value: String(draft.heartbeatBpm), status: 'stable' as const }
-              : vital
-          )
-        : existingPatient.vitals;
+      const vitals = [...existingPatient.vitals];
+
+      const upsertVital = (label: string, value: string, unit?: string, status: VitalStatus = 'stable') => {
+        const index = vitals.findIndex((vital) => vital.label === label);
+        if (index >= 0) {
+          const current = vitals[index];
+          vitals[index] = {
+            ...current,
+            value,
+            unit: unit ?? current.unit,
+            status: current.status ?? status,
+            trend: current.trend
+          };
+        } else {
+          vitals.push({ label, value, unit, status });
+        }
+      };
+
+      if (draft.heartbeatBpm != null) {
+        upsertVital('heart rate', String(draft.heartbeatBpm), 'bpm');
+      }
+
+      if (draft.bloodPressureSystolic != null && draft.bloodPressureDiastolic != null) {
+        upsertVital('blood pressure', `${draft.bloodPressureSystolic}/${draft.bloodPressureDiastolic}`);
+      }
+
+      if (draft.spo2Percent != null) {
+        upsertVital('spo₂', String(draft.spo2Percent), '%');
+      }
+
+      if (draft.temperatureC != null) {
+        upsertVital('temperature', String(draft.temperatureC), '°c');
+      }
+
+      const updatedVitals = vitals;
 
       const updatedTimeline = [timelineEntry, ...existingPatient.timeline].sort(
         (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -267,7 +376,10 @@ function App() {
 
   return (
     <div className="container-xxl py-4 px-3 px-lg-4" style={{ maxWidth: 1440 }}>
-      <Header onToggleSidebar={() => setIsSidebarOpen((open) => !open)} />
+      <Header
+        onToggleSidebar={() => setIsSidebarOpen((open) => !open)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
       <div className="d-flex flex-column flex-lg-row gap-4 align-items-start">
         <PatientSidebar
           patients={patientList}
@@ -350,6 +462,12 @@ function App() {
             setMedicationPatientId(null);
           }
         }}
+      />
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        preferences={accessibilityPreferences}
+        onChange={setAccessibilityPreferences}
       />
       {/* reopen appointment modal after managing meds */}
       <TimelineEventModal
