@@ -17,8 +17,7 @@ mongoose
   .connect(MONGODB_URI)
   .then(() => console.log('✅ Connected to MongoDB'))
   .catch((error) => {
-    console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
+    console.warn('⚠️ MongoDB connection failed, continuing without database:', error.message);
   });
 
 const patientSchema = new mongoose.Schema(
@@ -131,7 +130,10 @@ const patientSchema = new mongoose.Schema(
 const Patient = mongoose.model('Patient', patientSchema);
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use(express.json());
 
 app.get('/api/patients', async (_req, res) => {
@@ -266,8 +268,8 @@ app.post('/api/ai-diagnosis', async (req, res) => {
     // Call Python diagnostic assistant using spawn
     const { spawn } = await import('child_process');
 
-    const pythonProcess = spawn('python3', [
-      '../backend/scraper-agent/ai_diagnosis_api.py',
+    const pythonProcess = spawn('./venv/bin/python', [
+      './backend/scraper-agent/ai_diagnosis_api.py',
       JSON.stringify({
         symptom_description: fullSymptomDescription,
         gemini_api_key: process.env.GEMINI_API_KEY,
@@ -289,7 +291,24 @@ app.post('/api/ai-diagnosis', async (req, res) => {
     pythonProcess.on('close', (code) => {
       if (code === 0) {
         try {
-          const diagnoses = JSON.parse(resultData);
+          // Extract JSON from the output by finding the last valid JSON array
+          const lines = resultData.trim().split('\n');
+          let jsonData = '';
+
+          // Look for the last line that starts with '[' (JSON array)
+          for (let i = lines.length - 1; i >= 0; i--) {
+            if (lines[i].trim().startsWith('[')) {
+              // Collect all lines from this point to the end
+              jsonData = lines.slice(i).join('\n');
+              break;
+            }
+          }
+
+          if (!jsonData) {
+            throw new Error('No JSON data found in output');
+          }
+
+          const diagnoses = JSON.parse(jsonData);
 
           // Format response for frontend
           const response = {
@@ -314,6 +333,7 @@ app.post('/api/ai-diagnosis', async (req, res) => {
           res.json(response);
         } catch (parseError) {
           console.error('❌ Failed to parse AI response:', parseError);
+          console.error('Raw output:', resultData);
           res.status(500).json({
             message: 'Failed to parse AI diagnosis results',
             error: parseError.message
