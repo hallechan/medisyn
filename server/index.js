@@ -358,6 +358,15 @@ app.post('/api/ai-diagnosis', async (req, res) => {
   }
 });
 
+// Test endpoint for medications (alias for ai-diagnosis)
+app.post('/api/test-medications', async (req, res) => {
+  // Forward to the ai-diagnosis endpoint
+  req.url = '/api/ai-diagnosis';
+  return app._router.handle(req, res);
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🔬 AI Diagnosis API available at http://localhost:${PORT}/api/ai-diagnosis`);
+  console.log(`🧪 Test endpoint available at http://localhost:${PORT}/api/test-medications`);
 });

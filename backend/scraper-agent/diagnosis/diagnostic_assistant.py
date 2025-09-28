@@ -2,10 +2,14 @@
 # analyzes symptoms and returns probable diagnoses with certainty scores
 
 import re
-from typing import List, Dict, Tuple
+from typing import List, Dict
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Add parent directory to Python path for imports
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
 
 from main import ResearchScraper
 from config.ai_keywords import AIKeywordGenerator
@@ -293,8 +297,6 @@ class DiagnosticAssistant:
         evidence = []
 
         for article in articles:
-            article_lower = article.lower()
-
             # find sentences that mention symptom keywords
             sentences = re.split(r'[.!?]+', article)
 
@@ -335,51 +337,10 @@ class DiagnosticAssistant:
         else:
             return "Research indicates multiple factors may contribute to this condition"
 
-    def _generate_medication_recommendations(self, condition: str, symptom_description: str) -> List[Dict]:
+    def _generate_medication_recommendations(self, condition: str, _symptom_description: str) -> List[Dict]:
         """
         Generate medication recommendations for a given condition using AI
         Returns list of medications with dosages and administration details
-        """
-
-        prompt = f"""
-        You are a clinical pharmacist providing medication recommendations for a diagnosed condition.
-
-        Condition: {condition}
-        Patient symptoms: {symptom_description}
-
-        Provide 3-5 evidence-based medication recommendations in JSON format:
-        [
-          {{
-            "medication": "medication name",
-            "dosage": "specific dosage with units",
-            "frequency": "how often to take",
-            "route": "oral/topical/injection/etc",
-            "duration": "typical treatment duration",
-            "indication": "what symptoms/aspect this treats",
-            "monitoring": "what to monitor while on this medication",
-            "contraindications": "important warnings or contraindications"
-          }}
-        ]
-
-        Focus on:
-        - First-line treatments for women
-        - Evidence-based dosing
-        - Safety considerations
-        - Hormone-related considerations when relevant
-
-        Example for PCOS:
-        [
-          {{
-            "medication": "Metformin",
-            "dosage": "500-850 mg",
-            "frequency": "twice daily with meals",
-            "route": "oral",
-            "duration": "long-term",
-            "indication": "insulin resistance and metabolic symptoms",
-            "monitoring": "kidney function, vitamin B12, lactic acidosis symptoms",
-            "contraindications": "kidney disease, liver disease, alcohol abuse"
-          }}
-        ]
         """
 
         try:

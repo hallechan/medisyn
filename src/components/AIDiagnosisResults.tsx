@@ -1,16 +1,5 @@
 import { FC } from 'react';
 
-interface MedicationRecommendation {
-  medication: string;
-  dosage: string;
-  frequency: string;
-  route: string;
-  duration: string;
-  indication: string;
-  monitoring: string;
-  contraindications: string;
-}
-
 interface DiagnosisResult {
   condition: string;
   certainty_score: number;
@@ -18,7 +7,6 @@ interface DiagnosisResult {
   supporting_evidence: string[];
   research_articles_count: number;
   key_findings: string;
-  medication_recommendations: MedicationRecommendation[];
 }
 
 interface AIDiagnosisData {
@@ -35,7 +23,6 @@ interface AIDiagnosisResultsProps {
   diagnosisData: AIDiagnosisData | null;
   isLoading: boolean;
   error: string | null;
-  onAddMedications?: (condition: string, medications: MedicationRecommendation[]) => void;
 }
 
 const AIDiagnosisResults: FC<AIDiagnosisResultsProps> = ({
@@ -43,8 +30,7 @@ const AIDiagnosisResults: FC<AIDiagnosisResultsProps> = ({
   onClose,
   diagnosisData,
   isLoading,
-  error,
-  onAddMedications
+  error
 }) => {
   if (!isOpen) {
     return null;
@@ -59,18 +45,6 @@ const AIDiagnosisResults: FC<AIDiagnosisResultsProps> = ({
     }
   };
 
-  const handleAddMedicationsToPatient = (condition: string, medications: MedicationRecommendation[]) => {
-    if (onAddMedications) {
-      onAddMedications(condition, medications);
-    } else {
-      // Default action - show alert with medication info for terminal commands
-      const medicationList = medications.map(med =>
-        `${med.medication} ${med.dosage} ${med.frequency} (${med.route})`
-      ).join('\n');
-
-      alert(`Medications for ${condition}:\n\n${medicationList}\n\nUse these details to add medications to MongoDB via terminal commands.`);
-    }
-  };
 
   const getConfidenceIcon = (level: string) => {
     switch (level) {
@@ -206,49 +180,6 @@ const AIDiagnosisResults: FC<AIDiagnosisResultsProps> = ({
                         </div>
                       )}
 
-                      {/* Medication Recommendations */}
-                      {diagnosis.medication_recommendations && diagnosis.medication_recommendations.length > 0 && (
-                        <div className="mb-3">
-                          <div className="d-flex justify-content-between align-items-center mb-2">
-                            <strong className="small text-muted">Medication Recommendations:</strong>
-                            <button
-                              className="btn btn-sm btn-outline-primary rounded-pill"
-                              onClick={() => handleAddMedicationsToPatient(diagnosis.condition, diagnosis.medication_recommendations)}
-                            >
-                              <i className="bi bi-plus-circle me-1" />
-                              Add to Patient
-                            </button>
-                          </div>
-                          <div className="row g-2">
-                            {diagnosis.medication_recommendations.map((med, medIndex) => (
-                              <div key={medIndex} className="col-12">
-                                <div className="border rounded-3 p-3 bg-light">
-                                  <div className="d-flex justify-content-between align-items-start mb-2">
-                                    <h6 className="mb-0 text-primary">{med.medication}</h6>
-                                    <span className="badge bg-secondary">{med.route}</span>
-                                  </div>
-                                  <div className="row g-1 small text-muted">
-                                    <div className="col-6"><strong>Dosage:</strong> {med.dosage}</div>
-                                    <div className="col-6"><strong>Frequency:</strong> {med.frequency}</div>
-                                    <div className="col-6"><strong>Duration:</strong> {med.duration}</div>
-                                    <div className="col-6"><strong>Indication:</strong> {med.indication}</div>
-                                  </div>
-                                  {med.monitoring && (
-                                    <div className="mt-2 small">
-                                      <strong className="text-warning">Monitor:</strong> {med.monitoring}
-                                    </div>
-                                  )}
-                                  {med.contraindications && (
-                                    <div className="mt-1 small">
-                                      <strong className="text-danger">Contraindications:</strong> {med.contraindications}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>

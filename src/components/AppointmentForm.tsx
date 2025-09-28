@@ -113,7 +113,7 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     setShowAIDiagnosis(true);
 
     try {
-      const response = await fetch('http://localhost:4001/api/ai-diagnosis', {
+      const response = await fetch('http://localhost:4000/api/ai-diagnosis', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
