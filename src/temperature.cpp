@@ -20,20 +20,41 @@ void setup()
     Serial.begin(9600);
 }
 
-void loop()
-{
-    // Get the (raw) value of the temperature sensor.
+
+float readTemperature() {
     int val = analogRead(pinTemp);
-
-    // Determine the current resistance of the thermistor based on the sensor value.
     float resistance = (float)(1023-val)*10000/val;
+    return 1/(log(resistance/10000)/B+1/298.15)-273.15;
+}
 
-    // Calculate the temperature based on the resistance value.
-    float temperature = 1/(log(resistance/10000)/B+1/298.15)-273.15;
+void loop() {
+    const int windowSize = 10;
+    float readings[windowSize];
+    int index = 0;
+    bool equilibrium = false;
 
-    // Print the temperature to the serial console.
-    Serial.println(temperature);
+    // Fill buffer first
+    for (int i = 0; i < windowSize; i++) {
+        readings[i] = readTemperature();
+        delay(1000);
+    }
 
-    // Wait one second between measurements.
+    while (!equilibrium) {
+        readings[index] = readTemperature();
+        index = (index + 1) % windowSize;
+
+        float minTemp = readings[0];
+        float maxTemp = readings[0];
+        for (int i = 1; i < windowSize; i++) {
+            if (readings[i] < minTemp) minTemp = readings[i];
+            if (readings[i] > maxTemp) maxTemp = readings[i];
+        }
+        if ((maxTemp - minTemp) < 0.2) { // threshold for stability
+            equilibrium = true;
+            Serial.println(readings[index == 0 ? windowSize - 1 : index - 1]);
+        }
     delay(1000);
+}
+
+    delay(20000); // Wait before next measurement
 }

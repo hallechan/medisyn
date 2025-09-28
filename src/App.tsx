@@ -13,6 +13,23 @@ import { patients as seedPatients } from './data/patients';
 import type { AppointmentDraft, Medication, TimelineEntry } from './types';
 
 function App() {
+  // Update temperature vital for active patient
+  const handleTemperatureMeasured = (temperature: number) => {
+    const isHealthy = temperature >= 36.1 && temperature <= 37.2;
+    setPatientList((prev) =>
+      prev.map((patient) => {
+        if (patient.id !== activePatientId) return patient;
+        return {
+          ...patient,
+          vitals: patient.vitals.map((vital) =>
+            vital.label === 'temperature'
+              ? { ...vital, value: temperature.toFixed(2), status: isHealthy ? 'stable' : 'unstable' }
+              : vital
+          )
+        };
+      })
+    );
+  };
   const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
   const [patientList, setPatientList] = useState(seedPatients);
   const [activePatientId, setActivePatientId] = useState(seedPatients[0]?.id ?? '');
@@ -330,6 +347,7 @@ function App() {
             setMedicationPatientId(activePatient.id);
           }
         }}
+        onTemperatureMeasured={handleTemperatureMeasured}
       />
       <AddPatientModal
         isOpen={isAddPatientOpen}

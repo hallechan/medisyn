@@ -1,14 +1,19 @@
+// import { getTemperature } from '../../read_temp';
 import { FC, useEffect, useState } from 'react';
 import type { AppointmentDraft } from '../types';
+import AIDiagnosisResults from './AIDiagnosisResults';
+
 
 interface AppointmentFormProps {
   isOpen: boolean;
   onClose: () => void;
   patientName?: string;
+  patientAge?: number;
   draft?: AppointmentDraft;
   onSaveDraft: (draft: AppointmentDraft) => void;
   onPublish: (draft: AppointmentDraft) => void;
   onManageMedications?: () => void;
+  onTemperatureMeasured?: (temperature: number) => void;
 }
 
 const defaultDraft: AppointmentDraft = {
@@ -34,13 +39,49 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
   isOpen,
   onClose,
   patientName,
+  patientAge,
   draft,
   onSaveDraft,
   onPublish,
-  onManageMedications
+  onManageMedications,
+  onTemperatureMeasured
 }) => {
   const [form, setForm] = useState<AppointmentDraft>(draft ?? defaultDraft);
   const [focusInput, setFocusInput] = useState('');
+
+  // AI Diagnosis states
+  const [showAIDiagnosis, setShowAIDiagnosis] = useState(false);
+  const [aiDiagnosisData, setAiDiagnosisData] = useState<any>(null);
+  const [aiDiagnosisLoading, setAiDiagnosisLoading] = useState(false);
+  const [aiDiagnosisError, setAiDiagnosisError] = useState<string | null>(null);
+
+  // Temperature states
+  const [temperature, setTemperature] = useState<number | null>(null);
+  const [tempLoading, setTempLoading] = useState(false);
+  const [showTempWarning, setShowTempWarning] = useState(false);
+  const [tempError, setTempError] = useState<string | null>(null);
+
+  const handleTakeTemperature = async () => {
+  setShowTempWarning(true);
+  setTempLoading(true);
+  setTempError(null);
+  try {
+    const response = await fetch('http://localhost:4002/api/temperature');
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to get temperature');
+    }
+    setTemperature(data.temperature);
+    if (onTemperatureMeasured) {
+      onTemperatureMeasured(data.temperature);
+    }
+  } catch (err) {
+    setTempError(err instanceof Error ? err.message : "Unknown error");
+    setTemperature(null);
+  } finally {
+    setTempLoading(false);
+  }
+};
 
   useEffect(() => {
     if (isOpen) {
@@ -48,6 +89,9 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
       setFocusInput('');
       document.body.style.overflow = 'hidden';
     } else {
+      setTemperature(null); // Reset temperature when closing
+      setTempError(null);   // Also clear any error
+      setShowTempWarning(false); // Hide warning
       document.body.style.overflow = '';
     }
     return () => {
@@ -90,6 +134,50 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
   const handlePublish = () => {
     onPublish(form);
     onClose();
+  };
+
+  const handleAIDiagnosis = async () => {
+    // Validate that we have symptom summary
+    if (!form.symptomSummary || form.symptomSummary.trim() === '') {
+      alert('Please enter a symptom summary before requesting AI diagnosis.');
+      return;
+    }
+
+    setAiDiagnosisLoading(true);
+    setAiDiagnosisError(null);
+    setShowAIDiagnosis(true);
+
+    try {
+      const response = await fetch('http://localhost:4001/api/ai-diagnosis', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          symptomSummary: form.symptomSummary,
+          appointmentType: form.appointmentType,
+          weightKg: form.weightKg,
+          heightCm: form.heightCm,
+          heartbeatBpm: form.heartbeatBpm,
+          diagnosticFocus: form.diagnosticFocus,
+          notes: form.notes,
+          patientAge: patientAge
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to get AI diagnosis');
+      }
+
+      const data = await response.json();
+      setAiDiagnosisData(data);
+    } catch (error) {
+      console.error('AI diagnosis error:', error);
+      setAiDiagnosisError(error instanceof Error ? error.message : 'An unknown error occurred');
+    } finally {
+      setAiDiagnosisLoading(false);
+    }
   };
 
   return (
@@ -189,11 +277,47 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
             </div>
           </div>
           <div className="gradient-panel rounded-4 p-4">
-            <div className="d-flex gap-3 gap-lg-4">
+            <div className="d-flex gap-3 gap-lg-4 align-items-center">
               <i className="bi bi-heart-pulse fs-4 text-brand-secondary" />
               <div>
-                <strong>todo:</strong> stream device heartbeat feed and auto-update charts.
-                <div className="text-muted small">placeholder for Arduino integration + arrhythmia inference.</div>
+                <strong>take temperature</strong>
+                <div className="text-muted small">
+                  measure skin/body temperature with reliable Arduino integration. please place your finger on the temperature sensor before and while measuring.
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-gradient btn-sm mt-2"
+                  onClick={handleTakeTemperature}
+                  disabled={tempLoading}
+                >
+                  <i className="bi bi-thermometer-half me-1" /> take temperature
+                </button>
+                {tempLoading && (
+                  <div className="mt-2">
+                    <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+                    <span>measuring...</span>
+                  </div>
+                )}
+                <div className="mt-2">
+                  {temperature !== null && (
+                    <>
+                      <span className="fw-bold">Temperature: {temperature.toFixed(2)} °C</span>
+                      <br />
+                      {(() => {
+                        if (temperature >= 22 && temperature <= 35) {
+                          return <span className="text-success">Body temperature is healthy.</span>;
+                        } else if (temperature < 22) {
+                          return <span className="text-warning">Body temperature is below normal.</span>;
+                        } else {
+                          return <span className="text-danger">Body temperature is above normal.</span>;
+                        }
+                      })()}
+                    </>
+                  )}
+                  {tempError && (
+                    <span className="text-danger">Error: {tempError}</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -225,6 +349,43 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
               <div>
                 <strong>todo:</strong> launch cv intake for skin, edema, and posture checks.
                 <div className="text-muted small">route uploads to the cv microservice for multi-angle review.</div>
+              </div>
+            </div>
+          </div>
+          <div className="gradient-panel rounded-4 p-4">
+            <div className="d-flex gap-3 gap-lg-4 align-items-start">
+              <i className="bi bi-robot fs-4 text-brand-secondary" />
+              <div className="d-flex flex-column flex-grow-1 gap-2">
+                <div>
+                  <strong>AI-assisted diagnosis</strong>
+                  <div className="text-muted small">
+                    get evidence-based diagnostic suggestions powered by Gemini AI and PubMed research.
+                  </div>
+                </div>
+                <div className="d-flex gap-2">
+                  <button
+                    type="button"
+                    className="btn btn-gradient btn-sm"
+                    onClick={handleAIDiagnosis}
+                    disabled={!form.symptomSummary || form.symptomSummary.trim() === '' || aiDiagnosisLoading}
+                  >
+                    {aiDiagnosisLoading ? (
+                      <>
+                        <span className="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true" />
+                        analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <i className="bi bi-brain me-1" /> get AI diagnosis
+                      </>
+                    )}
+                  </button>
+                  {form.symptomSummary && form.symptomSummary.trim() === '' && (
+                    <span className="text-muted small align-self-center">
+                      enter symptoms first
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -290,6 +451,19 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
           </div>
         </form>
       </div>
+
+      {/* AI Diagnosis Results Modal */}
+      <AIDiagnosisResults
+        isOpen={showAIDiagnosis}
+        onClose={() => {
+          setShowAIDiagnosis(false);
+          setAiDiagnosisData(null);
+          setAiDiagnosisError(null);
+        }}
+        diagnosisData={aiDiagnosisData}
+        isLoading={aiDiagnosisLoading}
+        error={aiDiagnosisError}
+      />
     </div>
   );
 };
