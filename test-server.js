@@ -124,7 +124,8 @@ app.post('/api/ai-diagnosis', async (req, res) => {
                               d.certainty_score >= 0.4 ? 'Moderate' : 'Low',
               supporting_evidence: d.supporting_evidence,
               research_articles_count: d.research_articles,
-              key_findings: d.key_findings
+              key_findings: d.key_findings,
+              medication_recommendations: d.medication_recommendations || []
             })),
             generated_at: new Date().toISOString(),
             ai_model: 'Gemini 2.5 Flash + PubMed Research'
