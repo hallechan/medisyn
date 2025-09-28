@@ -1,4 +1,4 @@
-export type VitalStatus = 'Stable' | 'Elevated' | 'Critical' | 'Unknown';
+export type VitalStatus = 'stable' | 'elevated' | 'critical' | 'unknown';
 
 export interface VitalSign {
   label: string;
@@ -24,14 +24,17 @@ export interface TimelineEntry {
   date: string;
   title: string;
   description: string;
-  category: 'Appointment' | 'Lab' | 'Imaging' | 'Note';
+  category: 'appointment' | 'lab' | 'imaging' | 'note' | 'medication';
+  appointmentId?: string;
+  metadata?: Record<string, string>;
 }
 
 export interface Medication {
   name: string;
   dosage: string;
   schedule: string;
-  adherence: 'On Track' | 'Needs Review' | 'Paused';
+  adherence: 'on track' | 'needs review' | 'paused';
+  type?: 'pill' | 'bottle' | 'spray' | 'cream' | 'injection';
 }
 
 export interface ResearchHighlight {
@@ -41,14 +44,34 @@ export interface ResearchHighlight {
   url: string;
 }
 
+export interface AppointmentRecord {
+  id: string;
+  date: string;
+  summary: string;
+  notes: string;
+  draft: AppointmentDraft;
+}
+
+export interface MetricPoint {
+  time: string;
+  value: number;
+}
+
+export interface MetricSeries {
+  id: string;
+  name: string;
+  unit?: string;
+  points: MetricPoint[];
+}
+
 export interface PatientRecord extends PatientOverview {
   vitals: VitalSign[];
   timeline: TimelineEntry[];
   medications: Medication[];
   research: ResearchHighlight[];
   riskScore: number;
-  nextSteps: string[];
-  clinicalReminders: string[];
+  metrics: MetricSeries[];
+  appointmentHistory: AppointmentRecord[];
 }
 
 export interface AppointmentDraft {
@@ -59,4 +82,5 @@ export interface AppointmentDraft {
   heightCm?: number;
   notes: string;
   diagnosticFocus: string[];
+  heartbeatBpm?: number;
 }

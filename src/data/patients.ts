@@ -3,228 +3,388 @@ import { PatientRecord } from '../types';
 export const patients: PatientRecord[] = [
   {
     id: 'patient-001',
-    name: 'Amara Brooks',
-    age: 38,
+    name: 'Karina Ji-Min',
+    age: 24,
     pronouns: 'she/her',
-    avatar: 'https://i.pravatar.cc/160?img=47',
-    conditions: ['Peripartum cardiomyopathy', 'Hypertension'],
-    lastVisit: 'Mar 12, 2025',
-    specialty: 'Cardiology',
-    notes: 'Monitoring heart function postpartum with emphasis on female-specific markers.',
+    avatar: '/karina.jpg',
+    conditions: ['hypertension', 'autonomic imbalance'],
+    lastVisit: 'Apr 08, 2025',
+    specialty: 'cardiology',
+    notes: '',
     vitals: [
-      { label: 'Heart Rate', value: '92', unit: 'bpm', status: 'Elevated', trend: 'up' },
-      { label: 'Blood Pressure', value: '128/82', status: 'Stable', trend: 'steady' },
-      { label: 'SpO₂', value: '97', unit: '%', status: 'Stable', trend: 'steady' },
-      { label: 'Temperature', value: '36.9', unit: '°C', status: 'Stable' }
+      { label: 'heart rate', value: '92', unit: 'bpm', status: 'elevated', trend: 'up' },
+      { label: 'blood pressure', value: '128/82', status: 'stable', trend: 'steady' },
+      { label: 'spo₂', value: '97', unit: '%', status: 'stable', trend: 'steady' },
+      { label: 'temperature', value: '36.9', unit: '°c', status: 'stable' }
     ],
     timeline: [
       {
         date: 'Mar 12, 2025',
-        title: 'Cardiology follow-up',
-        description: 'Echocardiogram shows improving ejection fraction; continue telemetry monitoring.',
-        category: 'Appointment'
+        title: 'cardiology follow-up',
+        description: 'echo shows rising ejection fraction; keep telemetry running.',
+        category: 'appointment',
+        appointmentId: 'appt-001',
+        metadata: { focus: 'cardiomyopathy recovery plan' }
       },
       {
         date: 'Feb 22, 2025',
-        title: 'NT-proBNP labs',
-        description: 'Peptide trending downward; consider adjusting beta blockers.',
-        category: 'Lab'
+        title: 'nt-probnp labs',
+        description: 'peptide falling; consider beta-blocker adjustment.',
+        category: 'lab'
       },
       {
         date: 'Feb 09, 2025',
-        title: 'Home wearable sync',
-        description: 'Telemetry flags irregular nocturnal heart rhythm.',
-        category: 'Note'
+        title: 'home wearable sync',
+        description: 'telemetry flagged irregular nocturnal rhythm.',
+        category: 'note'
       }
     ],
     medications: [
-      { name: 'Carvedilol', dosage: '12.5 mg', schedule: '2x daily', adherence: 'On Track' },
-      { name: 'Lisinopril', dosage: '10 mg', schedule: 'Daily', adherence: 'Needs Review' }
+      { name: 'carvedilol', dosage: '12.5 mg', schedule: '2x daily', adherence: 'on track', type: 'pill' },
+      { name: 'lisinopril', dosage: '10 mg', schedule: 'daily', adherence: 'needs review', type: 'pill' }
     ],
     research: [
       {
-        title: 'Sex-specific cardiac rehab outcomes postpartum',
+        title: 'postpartum cardiac rehab outcomes',
         source: 'Journal of Women\'s Cardiology',
-        summary: 'Highlights improved outcomes when rehab programs integrate hormonal recovery metrics.',
+        summary: 'rehab with hormonal metrics improves postpartum recovery.',
         url: '#'
       },
       {
-        title: 'Wearable telemetry accuracy in female patients',
+        title: 'wearable telemetry accuracy in women',
         source: 'Digital Health Equity Consortium',
-        summary: 'Benchmarks accuracy of photoplethysmography for diverse skin tones and postpartum bodies.',
+        summary: 'benchmarks photoplethysmography across diverse skin tones.',
         url: '#'
       }
     ],
     riskScore: 68,
-    nextSteps: [
-      'Schedule in-clinic heartbeat capture via Arduino integration. TODO: Connect to hardware feed.',
-      'Trigger ML-based arrhythmia analysis. TODO: Wire to analytics microservice.',
-      'Queue cardio-focused physical therapy referral.'
+    metrics: [
+      {
+        id: 'heart-rate',
+        name: 'heart rate',
+        unit: 'bpm',
+        points: [
+          { time: 'jan', value: 98 },
+          { time: 'feb', value: 96 },
+          { time: 'mar', value: 94 },
+          { time: 'apr', value: 92 },
+          { time: 'may', value: 90 },
+          { time: 'jun', value: 89 },
+          { time: 'jul', value: 88 },
+          { time: 'aug', value: 87 },
+          { time: 'sep', value: 86 },
+          { time: 'oct', value: 86 },
+          { time: 'nov', value: 87 },
+          { time: 'dec', value: 88 }
+        ]
+      }
     ],
-    clinicalReminders: [
-      'Reassess ACE inhibitor dosage based on labs.',
-      'Confirm breastfeeding-safe medication list.'
+    appointmentHistory: [
+      {
+        id: 'appt-001',
+        date: '2025-03-12',
+        summary: 'postpartum cardio follow up',
+        notes: 'echo trending positive; continue telemetry and beta-blocker taper discussion.',
+        draft: {
+          appointmentType: 'postpartum cardio follow up',
+          symptomSummary: 'ongoing postpartum cardio monitoring with wearable correlations.',
+          duration: '45 minutes',
+          weightKg: 58,
+          heightCm: 167,
+          notes: 'echo trending positive; continue telemetry and beta-blocker taper discussion.',
+          diagnosticFocus: ['cardiomyopathy recovery plan', 'arrhythmia watch'],
+          heartbeatBpm: 92
+        }
+      },
+      {
+        id: 'appt-002',
+        date: '2025-02-09',
+        summary: 'wearable review',
+        notes: 'flagged nocturnal arrhythmia episodes; scheduled in-clinic capture.',
+        draft: {
+          appointmentType: 'wearable review',
+          symptomSummary: 'nighttime arrhythmia alerts with variability spikes.',
+          duration: '30 minutes',
+          weightKg: 58,
+          heightCm: 167,
+          notes: 'flagged nocturnal arrhythmia episodes; scheduled in-clinic capture.',
+          diagnosticFocus: ['autonomic reset protocol'],
+          heartbeatBpm: 95
+        }
+      }
     ]
   },
   {
     id: 'patient-002',
-    name: 'Lina Cho',
-    age: 29,
+    name: 'Ningning Yizhuo',
+    age: 22,
     pronouns: 'she/her',
-    avatar: 'https://i.pravatar.cc/160?img=32',
-    conditions: ['Polycystic ovary syndrome', 'Insulin resistance'],
+    avatar: '/ningning.jpg',
+    conditions: ['metabolic dysregulation', 'insulin resistance'],
     lastVisit: 'Mar 01, 2025',
-    specialty: 'Endocrinology',
-    notes: 'Focus on metabolic health with cycle-aware endocrine metrics.',
+    specialty: 'endocrinology',
+    notes: '',
     vitals: [
-      { label: 'Blood Glucose', value: '105', unit: 'mg/dL', status: 'Elevated', trend: 'down' },
-      { label: 'Resting Heart Rate', value: '78', unit: 'bpm', status: 'Stable' },
-      { label: 'BMI', value: '27.5', status: 'Elevated' }
+      { label: 'blood pressure', value: '122/80', status: 'stable', trend: 'steady' },
+      { label: 'heart rate', value: '76', unit: 'bpm', status: 'stable' },
+      { label: 'spo₂', value: '98', unit: '%', status: 'stable' },
+      { label: 'temperature', value: '36.7', unit: '°c', status: 'stable' }
     ],
     timeline: [
       {
         date: 'Mar 01, 2025',
-        title: 'Cycle-synced endocrine review',
-        description: 'Discussed ovulatory phase metrics and their metabolic impact.',
-        category: 'Appointment'
+        title: 'cycle-synced endocrine review',
+        description: 'reviewed ovulatory metrics and metabolic impact.',
+        category: 'appointment',
+        appointmentId: 'appt-101'
       },
       {
         date: 'Feb 18, 2025',
-        title: 'Continuous glucose monitor upload',
-        description: 'Nighttime glucose spikes correlate with luteal phase. TODO: Build luteal-phase analytics.',
-        category: 'Note'
+        title: 'continuous glucose monitor upload',
+        description: 'night glucose spikes track with luteal phase. todo: add luteal analytics.',
+        category: 'note'
       }
     ],
     medications: [
-      { name: 'Metformin', dosage: '500 mg', schedule: '2x daily', adherence: 'On Track' }
+      { name: 'metformin', dosage: '500 mg', schedule: '2x daily', adherence: 'on track', type: 'pill' }
     ],
     research: [
       {
-        title: 'Metabolic markers across menstrual phases',
+        title: 'metabolic markers across menstrual phases',
         source: 'Women\'s Health Metabolism Review',
-        summary: 'Identifies phase-specific insulin sensitivity targets for improved treatment.',
+        summary: 'maps phase-specific insulin targets to treatment plans.',
         url: '#'
       }
     ],
     riskScore: 45,
-    nextSteps: [
-      'Collect computer vision body composition scan. TODO: Integrate CV pipeline.',
-      'Sync nutrition plan with cycle tracking app.',
-      'Review lab panel focusing on female reference ranges.'
+    metrics: [
+      {
+        id: 'heart-rate',
+        name: 'heart rate',
+        unit: 'bpm',
+        points: [
+          { time: 'jan', value: 84 },
+          { time: 'feb', value: 80 },
+          { time: 'mar', value: 78 },
+          { time: 'apr', value: 76 },
+          { time: 'may', value: 74 },
+          { time: 'jun', value: 73 },
+          { time: 'jul', value: 72 },
+          { time: 'aug', value: 72 },
+          { time: 'sep', value: 73 },
+          { time: 'oct', value: 74 },
+          { time: 'nov', value: 76 },
+          { time: 'dec', value: 78 }
+        ]
+      }
     ],
-    clinicalReminders: [
-      'Order fasting insulin labs next visit.',
-      'Confirm sleep hygiene interventions are effective.'
+    appointmentHistory: [
+      {
+        id: 'appt-101',
+        date: '2025-03-01',
+        summary: 'cycle-synced endocrine review',
+        notes: 'aligned nutrition plan with ovulatory phase metrics; reinforced CGM schedule.',
+        draft: {
+          appointmentType: 'cycle-synced endocrine review',
+          symptomSummary: 'reviewed luteal phase insulin sensitivity shifts.',
+          duration: '45 minutes',
+          weightKg: 52,
+          heightCm: 165,
+          notes: 'aligned nutrition plan with ovulatory phase metrics; reinforced CGM schedule.',
+          diagnosticFocus: ['cycle sync adjustment'],
+          heartbeatBpm: 78
+        }
+      },
+      {
+        id: 'appt-102',
+        date: '2025-02-11',
+        summary: 'metabolic coaching',
+        notes: 'introduced resistance training blocks and stress-modulation routine.',
+        draft: {
+          appointmentType: 'metabolic coaching',
+          symptomSummary: 'metabolic fatigue with luteal cravings and fasting variability.',
+          duration: '30 minutes',
+          weightKg: 52,
+          heightCm: 165,
+          notes: 'introduced resistance training blocks and stress-modulation routine.',
+          diagnosticFocus: ['metabolic stabilization'],
+          heartbeatBpm: 76
+        }
+      }
     ]
   },
   {
     id: 'patient-003',
-    name: 'Draya Patel',
-    age: 52,
+    name: 'Winter Min-Jeong',
+    age: 23,
     pronouns: 'she/her',
-    avatar: 'https://i.pravatar.cc/160?img=49',
-    conditions: ['Perimenopause symptoms', 'Osteopenia'],
-    lastVisit: 'Feb 26, 2025',
-    specialty: 'Integrative Medicine',
-    notes: 'Balancing hormone therapy with bone-density preservation.',
+    avatar: '/winter.jpg',
+    conditions: ['postural tachycardia', 'bone density risk'],
+    lastVisit: 'Mar 18, 2025',
+    specialty: 'integrative medicine',
+    notes: '',
     vitals: [
-      { label: 'Blood Pressure', value: '134/86', status: 'Elevated', trend: 'up' },
-      { label: 'DEXA T-score', value: '-1.8', status: 'Elevated' },
-      { label: 'Vitamin D', value: '28', unit: 'ng/mL', status: 'Critical' }
+      { label: 'blood pressure', value: '134/86', status: 'elevated', trend: 'up' },
+      { label: 'heart rate', value: '82', unit: 'bpm', status: 'elevated' },
+      { label: 'spo₂', value: '96', unit: '%', status: 'stable' },
+      { label: 'temperature', value: '36.8', unit: '°c', status: 'stable' }
     ],
     timeline: [
       {
         date: 'Feb 26, 2025',
-        title: 'Hormone therapy adjustment',
-        description: 'Tweaked estradiol dosage to align with symptom tracking and lab results.',
-        category: 'Appointment'
+        title: 'hormone therapy adjustment',
+        description: 'adjusted estradiol dose per symptoms and labs.',
+        category: 'appointment',
+        appointmentId: 'appt-201'
       },
       {
         date: 'Feb 05, 2025',
-        title: 'DEXA scan import',
-        description: 'Computer vision annotation requested for lumbar spine analysis. TODO: Add imaging pipeline.',
-        category: 'Imaging'
+        title: 'dexa scan import',
+        description: 'cv annotation requested for lumbar spine. todo: add imaging pipeline.',
+        category: 'imaging'
       }
     ],
     medications: [
-      { name: 'Estradiol patch', dosage: '0.05 mg', schedule: 'Weekly', adherence: 'On Track' },
-      { name: 'Calcium citrate', dosage: '600 mg', schedule: 'Daily', adherence: 'On Track' }
+      { name: 'estradiol patch', dosage: '0.05 mg', schedule: 'weekly', adherence: 'on track', type: 'cream' },
+      { name: 'calcium citrate', dosage: '600 mg', schedule: 'daily', adherence: 'on track', type: 'pill' }
     ],
     research: [
       {
-        title: 'Bone density outcomes in hormone therapy',
+        title: 'bone density outcomes in hormone therapy',
         source: 'North American Menopause Society',
-        summary: 'Quantifies bone density preservation when therapy is tailored to menopausal stages.',
+        summary: 'details bone density gains when therapy matches menopausal stage.',
         url: '#'
       },
       {
-        title: 'AI-assisted imaging for osteoporosis in women',
+        title: 'ai-assisted imaging for osteoporosis in women',
         source: 'Radiology Innovations Quarterly',
-        summary: 'AI models detect trabecular changes earlier in female cohorts.',
+        summary: 'ai spots trabecular change earlier in female cohorts.',
         url: '#'
       }
     ],
     riskScore: 52,
-    nextSteps: [
-      'Process most recent DEXA scan via CV model. TODO: Connect imaging service.',
-      'Schedule weight-bearing PT evaluation.',
-      'Review dietary calcium intake log.'
+    metrics: [
+      {
+        id: 'heart-rate',
+        name: 'heart rate',
+        unit: 'bpm',
+        points: [
+          { time: 'jan', value: 88 },
+          { time: 'feb', value: 86 },
+          { time: 'mar', value: 84 },
+          { time: 'apr', value: 83 },
+          { time: 'may', value: 82 },
+          { time: 'jun', value: 82 },
+          { time: 'jul', value: 81 },
+          { time: 'aug', value: 81 },
+          { time: 'sep', value: 82 },
+          { time: 'oct', value: 83 },
+          { time: 'nov', value: 84 },
+          { time: 'dec', value: 85 }
+        ]
+      }
     ],
-    clinicalReminders: [
-      'Repeat Vitamin D lab in 8 weeks.',
-      'Confirm bone turnover markers ordered.'
+    appointmentHistory: [
+      {
+        id: 'appt-201',
+        date: '2025-02-26',
+        summary: 'hormone therapy adjustment',
+        notes: 'titrated estradiol patch; plan repeat labs in six weeks.',
+        draft: {
+          appointmentType: 'hormone therapy adjustment',
+          symptomSummary: 'perimenopausal symptom review with bone health emphasis.',
+          duration: '60 minutes',
+          weightKg: 55,
+          heightCm: 166,
+          notes: 'titrated estradiol patch; plan repeat labs in six weeks.',
+          diagnosticFocus: ['bone-density support'],
+          heartbeatBpm: 82
+        }
+      }
     ]
   },
   {
     id: 'patient-004',
-    name: 'Sasha Mendes',
-    age: 45,
-    pronouns: 'she/they',
-    avatar: 'https://i.pravatar.cc/160?img=56',
-    conditions: ['Autoimmune thyroiditis', 'Chronic fatigue'],
+    name: 'Giselle Uchinaga',
+    age: 24,
+    pronouns: 'she/her',
+    avatar: '/giselle.jpg',
+    conditions: ['autoimmune thyroiditis', 'chronic fatigue'],
     lastVisit: 'Jan 30, 2025',
-    specialty: 'Immunology',
-    notes: 'Interdisciplinary approach combining endocrine, immune, and sleep medicine.',
+    specialty: 'immunology',
+    notes: '',
     vitals: [
-      { label: 'TSH', value: '3.8', unit: 'mIU/L', status: 'Elevated', trend: 'up' },
-      { label: 'Resting Heart Rate', value: '88', unit: 'bpm', status: 'Elevated', trend: 'up' },
-      { label: 'Temperature', value: '36.2', unit: '°C', status: 'Stable' }
+      { label: 'blood pressure', value: '126/84', status: 'elevated', trend: 'up' },
+      { label: 'heart rate', value: '88', unit: 'bpm', status: 'elevated', trend: 'up' },
+      { label: 'spo₂', value: '95', unit: '%', status: 'stable' },
+      { label: 'temperature', value: '36.2', unit: '°c', status: 'stable' }
     ],
     timeline: [
       {
         date: 'Jan 30, 2025',
-        title: 'Immunology consult',
-        description: 'Assessed flare-up and adjusted low-dose naltrexone.',
-        category: 'Appointment'
+        title: 'immunology consult',
+        description: 'assessed flare and adjusted low-dose naltrexone.',
+        category: 'appointment',
+        appointmentId: 'appt-301'
       },
       {
         date: 'Jan 10, 2025',
-        title: 'Wearable fatigue index',
-        description: 'Imported HRV metrics; flagged need for recovery protocol.',
-        category: 'Note'
+        title: 'wearable fatigue index',
+        description: 'imported hrv metrics; flagged need for recovery plan.',
+        category: 'note'
       }
     ],
     medications: [
-      { name: 'Levothyroxine', dosage: '75 mcg', schedule: 'Daily', adherence: 'On Track' },
-      { name: 'Low-dose naltrexone', dosage: '4.5 mg', schedule: 'Daily', adherence: 'Paused' }
+      { name: 'levothyroxine', dosage: '75 mcg', schedule: 'daily', adherence: 'on track', type: 'pill' },
+      { name: 'low-dose naltrexone', dosage: '4.5 mg', schedule: 'daily', adherence: 'paused', type: 'pill' }
     ],
     research: [
       {
-        title: 'Immune modulation in AFAB patients',
+        title: 'immune modulation in afab patients',
         source: 'Immunology & Gender Review',
-        summary: 'Explores unique cytokine expression profiles linked to hormonal cycles.',
+        summary: 'outlines cytokine shifts tied to hormonal cycles.',
         url: '#'
       }
     ],
     riskScore: 61,
-    nextSteps: [
-      'Launch fatigue ML classifier once wearable sync is restored. TODO: Connect data ingestion API.',
-      'Coordinate telehealth follow-up focused on sleep quality.',
-      'Review thyroid antibody panel next lab cycle.'
+    metrics: [
+      {
+        id: 'heart-rate',
+        name: 'heart rate',
+        unit: 'bpm',
+        points: [
+          { time: 'jan', value: 94 },
+          { time: 'feb', value: 92 },
+          { time: 'mar', value: 90 },
+          { time: 'apr', value: 89 },
+          { time: 'may', value: 88 },
+          { time: 'jun', value: 87 },
+          { time: 'jul', value: 86 },
+          { time: 'aug', value: 86 },
+          { time: 'sep', value: 87 },
+          { time: 'oct', value: 88 },
+          { time: 'nov', value: 89 },
+          { time: 'dec', value: 91 }
+        ]
+      }
     ],
-    clinicalReminders: [
-      'Confirm medication refill compliance.',
-      'Assess depression screening at next visit.'
+    appointmentHistory: [
+      {
+        id: 'appt-301',
+        date: '2025-01-30',
+        summary: 'immunology consult',
+        notes: 'flare management with low-dose naltrexone; sleep hygiene focus.',
+        draft: {
+          appointmentType: 'immunology consult',
+          symptomSummary: 'fatigue spikes with thyroid antibody elevations.',
+          duration: '45 minutes',
+          weightKg: 57,
+          heightCm: 164,
+          notes: 'flare management with low-dose naltrexone; sleep hygiene focus.',
+          diagnosticFocus: ['thyroid modulation review'],
+          heartbeatBpm: 88
+        }
+      }
     ]
   }
 ];

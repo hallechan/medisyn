@@ -1,195 +1,296 @@
-import { FC, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import type { AppointmentDraft } from '../types';
 
 interface AppointmentFormProps {
-  onDraftChange?: (draft: AppointmentDraft) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  patientName?: string;
+  draft?: AppointmentDraft;
+  onSaveDraft: (draft: AppointmentDraft) => void;
+  onPublish: (draft: AppointmentDraft) => void;
+  onManageMedications?: () => void;
 }
 
 const defaultDraft: AppointmentDraft = {
-  appointmentType: 'Comprehensive consult',
+  appointmentType: 'comprehensive consult',
   symptomSummary: '',
   duration: '45 minutes',
   weightKg: undefined,
   heightCm: undefined,
   notes: '',
-  diagnosticFocus: []
+  diagnosticFocus: [],
+  heartbeatBpm: undefined
 };
 
-const AppointmentForm: FC<AppointmentFormProps> = ({ onDraftChange }) => {
-  const [draft, setDraft] = useState<AppointmentDraft>(defaultDraft);
-  const [newFocus, setNewFocus] = useState('');
+const FOCUS_SUGGESTIONS = [
+  'cardiomyopathy recovery plan',
+  'cycle sync adjustment',
+  'bone-density support',
+  'thyroid modulation review',
+  'autonomic reset protocol'
+];
 
-  const updateDraft = (patch: Partial<AppointmentDraft>) => {
-    const updated = { ...draft, ...patch };
-    setDraft(updated);
-    onDraftChange?.(updated);
+const AppointmentForm: FC<AppointmentFormProps> = ({
+  isOpen,
+  onClose,
+  patientName,
+  draft,
+  onSaveDraft,
+  onPublish,
+  onManageMedications
+}) => {
+  const [form, setForm] = useState<AppointmentDraft>(draft ?? defaultDraft);
+  const [focusInput, setFocusInput] = useState('');
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm(draft ?? defaultDraft);
+      setFocusInput('');
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, draft]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  const updateForm = (patch: Partial<AppointmentDraft>) => {
+    setForm((prev) => ({ ...prev, ...patch }));
   };
 
   const addFocus = () => {
-    const trimmed = newFocus.trim();
-    if (!trimmed || draft.diagnosticFocus.includes(trimmed)) {
+    const trimmed = focusInput.trim();
+    if (!trimmed || form.diagnosticFocus.includes(trimmed)) {
       return;
     }
-    const updated = { ...draft, diagnosticFocus: [...draft.diagnosticFocus, trimmed] };
-    setDraft(updated);
-    setNewFocus('');
-    onDraftChange?.(updated);
+    setForm((prev) => ({
+      ...prev,
+      diagnosticFocus: [...prev.diagnosticFocus, trimmed]
+    }));
+    setFocusInput('');
   };
 
   const removeFocus = (focus: string) => {
-    const updated = {
-      ...draft,
-      diagnosticFocus: draft.diagnosticFocus.filter((item) => item !== focus)
-    };
-    setDraft(updated);
-    onDraftChange?.(updated);
+    setForm((prev) => ({
+      ...prev,
+      diagnosticFocus: prev.diagnosticFocus.filter((item) => item !== focus)
+    }));
+  };
+
+  const handleSaveDraft = () => {
+    onSaveDraft(form);
+    onClose();
+  };
+
+  const handlePublish = () => {
+    onPublish(form);
+    onClose();
   };
 
   return (
-    <section className="bg-white rounded-4 shadow-sm p-4 h-100">
-      <div className="d-flex align-items-center justify-content-between mb-3">
-        <h3 className="h5 mb-0">Start new appointment</h3>
-        <span className="badge bg-brand-primary text-white">Draft</span>
-      </div>
-      <p className="text-muted small">
-        Capture patient-reported symptoms, connect hardware inputs, and prep ML-driven diagnostics.
-        Backend integrations are marked as TODO for the next iteration.
-      </p>
-      <form className="d-grid gap-3">
-        <div>
-          <label className="form-label">Appointment type</label>
-          <select
-            className="form-select rounded-3"
-            value={draft.appointmentType}
-            onChange={(event) => updateDraft({ appointmentType: event.target.value })}
+    <div className="appointment-modal-overlay" role="dialog" aria-modal="true">
+      <div className="appointment-modal-backdrop" onClick={onClose} />
+      <div className="appointment-modal-dialog gradient-surface border-0 shadow-lg p-4 p-lg-5 rounded-4">
+        <div className="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <h3 className="h4 mb-1">new appointment</h3>
+            {patientName && <p className="text-muted small mb-0">for {patientName}</p>}
+          </div>
+          <button
+            type="button"
+            className="btn btn-light btn-sm rounded-pill d-flex align-items-center justify-content-center"
+            onClick={onClose}
+            aria-label="Close appointment form"
           >
-            <option>Comprehensive consult</option>
-            <option>Cycle-aligned follow-up</option>
-            <option>Medication review</option>
-            <option>Telehealth check-in</option>
-          </select>
+            <i className="bi bi-x-lg" />
+          </button>
         </div>
-        <div>
-          <label className="form-label">Symptom overview</label>
-          <textarea
-            className="form-control rounded-3"
-            rows={3}
-            placeholder="Document phase of cycle, onset, severity, triggers, and context."
-            value={draft.symptomSummary}
-            onChange={(event) => updateDraft({ symptomSummary: event.target.value })}
-          />
-        </div>
-        <div className="row g-3">
-          <div className="col-6">
-            <label className="form-label">Weight (kg)</label>
-            <input
-              type="number"
-              className="form-control rounded-3"
-              placeholder="e.g. 68"
-              value={draft.weightKg ?? ''}
-              onChange={(event) => updateDraft({ weightKg: Number(event.target.value) || undefined })}
-            />
-          </div>
-          <div className="col-6">
-            <label className="form-label">Height (cm)</label>
-            <input
-              type="number"
-              className="form-control rounded-3"
-              placeholder="e.g. 172"
-              value={draft.heightCm ?? ''}
-              onChange={(event) => updateDraft({ heightCm: Number(event.target.value) || undefined })}
-            />
-          </div>
-        </div>
-        <div className="alert gradient-panel rounded-4">
-          <div className="d-flex gap-3">
-            <i className="bi bi-heart-pulse fs-4 text-brand-secondary" />
-            <div>
-              <strong>TODO:</strong> Stream Arduino heartbeat telemetry and auto-attach to this appointment.
-              <div className="text-muted small">
-                Reserve endpoint for serial ingestion + anomaly detection inference.
-              </div>
+        <form
+          className="d-grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handlePublish();
+          }}
+        >
+          <div className="row g-4">
+            <div className="col-12 col-lg-6">
+              <label className="form-label">appointment type</label>
+              <select
+                className="form-select rounded-3 token-input"
+                value={form.appointmentType}
+                onChange={(event) => updateForm({ appointmentType: event.target.value })}
+              >
+                <option>comprehensive consult</option>
+                <option>cycle-aligned follow-up</option>
+                <option>medication review</option>
+                <option>telehealth check-in</option>
+              </select>
             </div>
-          </div>
-        </div>
-        <div className="alert gradient-panel rounded-4">
-          <div className="d-flex gap-3">
-            <i className="bi bi-camera-video fs-4 text-brand-secondary" />
-            <div>
-              <strong>TODO:</strong> Launch computer vision intake to capture skin tone, edema, and posture cues.
-              <div className="text-muted small">
-                Reserve secure upload bucket + call CV microservice for multi-angle assessments.
-              </div>
+            <div className="col-6 col-lg-3">
+              <label className="form-label">duration</label>
+              <select
+                className="form-select rounded-3 token-input"
+                value={form.duration}
+                onChange={(event) => updateForm({ duration: event.target.value })}
+              >
+                <option>45 minutes</option>
+                <option>30 minutes</option>
+                <option>60 minutes</option>
+              </select>
             </div>
-          </div>
-        </div>
-        <div>
-          <label className="form-label">Add diagnostic focus areas</label>
-          <div className="input-group rounded-3 overflow-hidden">
-            <input
-              className="form-control border-0"
-              placeholder="e.g. Cardiomyopathy recovery, Luteal phase metabolic shift"
-              value={newFocus}
-              onChange={(event) => setNewFocus(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  addFocus();
+            <div className="col-6 col-lg-3">
+              <label className="form-label">heartbeat (bpm)</label>
+              <input
+                type="number"
+                className="form-control rounded-3 token-input"
+                placeholder="e.g. 82"
+                value={form.heartbeatBpm ?? ''}
+                onChange={(event) =>
+                  updateForm({ heartbeatBpm: Number(event.target.value) || undefined })
                 }
-              }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="form-label">symptom overview</label>
+            <textarea
+              className="form-control rounded-3 token-input"
+              rows={3}
+              placeholder="note cycle phase, onset, severity, and triggers."
+              value={form.symptomSummary}
+              onChange={(event) => updateForm({ symptomSummary: event.target.value })}
             />
-            <button type="button" className="btn bg-brand-secondary text-white" onClick={addFocus}>
-              <i className="bi bi-plus-circle me-1" /> Add
+          </div>
+          <div className="row g-4">
+            <div className="col-6">
+              <label className="form-label">weight (kg)</label>
+              <input
+                type="number"
+                className="form-control rounded-3 token-input"
+                placeholder="e.g. 68"
+                value={form.weightKg ?? ''}
+                onChange={(event) => updateForm({ weightKg: Number(event.target.value) || undefined })}
+              />
+            </div>
+            <div className="col-6">
+              <label className="form-label">height (cm)</label>
+              <input
+                type="number"
+                className="form-control rounded-3 token-input"
+                placeholder="e.g. 172"
+                value={form.heightCm ?? ''}
+                onChange={(event) => updateForm({ heightCm: Number(event.target.value) || undefined })}
+              />
+            </div>
+          </div>
+          <div className="gradient-panel rounded-4 p-4">
+            <div className="d-flex gap-3 gap-lg-4">
+              <i className="bi bi-heart-pulse fs-4 text-brand-secondary" />
+              <div>
+                <strong>todo:</strong> stream device heartbeat feed and auto-update charts.
+                <div className="text-muted small">placeholder for Arduino integration + arrhythmia inference.</div>
+              </div>
+            </div>
+          </div>
+          <div className="gradient-panel rounded-4 p-4">
+            <div className="d-flex gap-3 gap-lg-4 align-items-start">
+              <i className="bi bi-capsule fs-4 text-brand-secondary" />
+              <div className="d-flex flex-column flex-grow-1 gap-2">
+                <div>
+                  <strong>manage medications</strong>
+                  <div className="text-muted small">add prescriptions, refills, or discontinue therapy directly from this appointment.</div>
+                </div>
+                <div className="d-flex gap-2">
+                  <button type="button" className="btn btn-gradient btn-sm" onClick={onManageMedications}>
+                    <i className="bi bi-plus-circle me-1" /> add
+                  </button>
+                  <button type="button" className="btn btn-gradient btn-sm" onClick={onManageMedications}>
+                    <i className="bi bi-arrow-repeat me-1" /> refill
+                  </button>
+                  <button type="button" className="btn btn-gradient btn-sm" onClick={onManageMedications}>
+                    <i className="bi bi-x-circle me-1" /> discontinue
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="gradient-panel rounded-4 p-4">
+            <div className="d-flex gap-3 gap-lg-4">
+              <i className="bi bi-camera-video fs-4 text-brand-secondary" />
+              <div>
+                <strong>todo:</strong> launch cv intake for skin, edema, and posture checks.
+                <div className="text-muted small">route uploads to the cv microservice for multi-angle review.</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label className="form-label">add diagnostic focus areas</label>
+            <div className="input-group rounded-3 overflow-hidden gradient-panel">
+              <input
+                className="form-control border-0 bg-transparent text-secondary"
+                placeholder="e.g. cardiomyopathy recovery, luteal shift"
+                list="focus-suggestions"
+                value={focusInput}
+                onChange={(event) => setFocusInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addFocus();
+                  }
+                }}
+              />
+              <button type="button" className="btn btn-gradient" onClick={addFocus}>
+                <i className="bi bi-plus-circle me-1" /> add
+              </button>
+            </div>
+            <datalist id="focus-suggestions">
+              {FOCUS_SUGGESTIONS.map((suggestion) => (
+                <option key={suggestion} value={suggestion} />
+              ))}
+            </datalist>
+            <div className="d-flex flex-wrap gap-3 mt-3">
+              {form.diagnosticFocus.map((focus) => (
+                <span key={focus} className="badge bg-brand-secondary text-white d-flex align-items-center gap-2">
+                  {focus}
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white btn-sm"
+                    aria-label={`remove ${focus}`}
+                    onClick={() => removeFocus(focus)}
+                  />
+                </span>
+              ))}
+              {form.diagnosticFocus.length === 0 && (
+                <span className="text-muted small">no focus areas added yet.</span>
+              )}
+            </div>
+          </div>
+          <div>
+            <label className="form-label">clinician notes</label>
+            <textarea
+              className="form-control rounded-3 token-input"
+              rows={3}
+              placeholder="outline labs, imaging, or consults."
+              value={form.notes}
+              onChange={(event) => updateForm({ notes: event.target.value })}
+            />
+          </div>
+          <div className="d-flex gap-3 justify-content-end">
+            <button type="button" className="btn gradient-ghost text-brand-secondary border-0" onClick={handleSaveDraft}>
+              save draft
+            </button>
+            <button type="submit" className="btn btn-gradient">
+              publish
             </button>
           </div>
-          <div className="d-flex flex-wrap gap-2 mt-2">
-            {draft.diagnosticFocus.map((focus) => (
-              <span key={focus} className="badge bg-brand-secondary text-white d-flex align-items-center gap-2">
-                {focus}
-                <button
-                  type="button"
-                  className="btn-close btn-close-white btn-sm"
-                  aria-label={`Remove ${focus}`}
-                  onClick={() => removeFocus(focus)}
-                />
-              </span>
-            ))}
-            {draft.diagnosticFocus.length === 0 && (
-              <span className="text-muted small">No focus areas added yet.</span>
-            )}
-          </div>
-        </div>
-        <div>
-          <label className="form-label">Clinician notes</label>
-          <textarea
-            className="form-control rounded-3"
-            rows={3}
-            placeholder="Outline recommended labs, imaging, or consultations."
-            value={draft.notes}
-            onChange={(event) => updateDraft({ notes: event.target.value })}
-          />
-        </div>
-        <div className="alert alert-info rounded-4 border-0">
-          <div className="d-flex gap-3 align-items-start">
-            <i className="bi bi-journal-text text-brand-secondary fs-4" />
-            <div>
-              <strong>TODO:</strong> Persist this draft to the care plan service and notify collaborating clinicians.
-              <div className="text-muted small">
-                Requires auth token exchange + role-based routing rules.
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="d-flex gap-3">
-          <button type="button" className="btn bg-brand-secondary text-white rounded-pill px-4">
-            Save draft
-          </button>
-          <button type="button" className="btn btn-outline-secondary rounded-pill px-4">
-            Share with team
-          </button>
-        </div>
-      </form>
-    </section>
+        </form>
+      </div>
+    </div>
   );
 };
 
