@@ -15,7 +15,7 @@ export const patients: PatientRecord[] = [
       { label: 'heart rate', value: '92', unit: 'bpm', status: 'elevated', trend: 'up' },
       { label: 'blood pressure', value: '128/82', status: 'stable', trend: 'steady' },
       { label: 'spo₂', value: '97', unit: '%', status: 'stable', trend: 'steady' },
-      { label: 'temperature', value: '36.9', unit: '°c', status: 'stable' }
+  { label: 'temperature', value: '', unit: '°c', status: 'measured' } // To be filled with measured value
     ],
     timeline: [
       {
@@ -128,7 +128,7 @@ export const patients: PatientRecord[] = [
       { label: 'blood pressure', value: '122/80', status: 'stable', trend: 'steady' },
       { label: 'heart rate', value: '76', unit: 'bpm', status: 'stable' },
       { label: 'spo₂', value: '98', unit: '%', status: 'stable' },
-      { label: 'temperature', value: '36.7', unit: '°c', status: 'stable' }
+  { label: 'temperature', value: '', unit: '°c', status: 'measured' } // To be filled with measured value
     ],
     timeline: [
       {
@@ -227,7 +227,7 @@ export const patients: PatientRecord[] = [
       { label: 'blood pressure', value: '134/86', status: 'elevated', trend: 'up' },
       { label: 'heart rate', value: '82', unit: 'bpm', status: 'elevated' },
       { label: 'spo₂', value: '96', unit: '%', status: 'stable' },
-      { label: 'temperature', value: '36.8', unit: '°c', status: 'stable' }
+  { label: 'temperature', value: '', unit: '°c', status: 'measured' } // To be filled with measured value
     ],
     timeline: [
       {
@@ -317,7 +317,7 @@ export const patients: PatientRecord[] = [
       { label: 'blood pressure', value: '126/84', status: 'elevated', trend: 'up' },
       { label: 'heart rate', value: '88', unit: 'bpm', status: 'elevated', trend: 'up' },
       { label: 'spo₂', value: '95', unit: '%', status: 'stable' },
-      { label: 'temperature', value: '36.2', unit: '°c', status: 'stable' }
+  { label: 'temperature', value: '', unit: '°c', status: 'measured' } // To be filled with measured value
     ],
     timeline: [
       {

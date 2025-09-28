@@ -12,6 +12,7 @@ interface AppointmentFormProps {
   onSaveDraft: (draft: AppointmentDraft) => void;
   onPublish: (draft: AppointmentDraft) => void;
   onManageMedications?: () => void;
+  onTemperatureMeasured?: (temperature: number) => void;
 }
 
 const defaultDraft: AppointmentDraft = {
@@ -45,13 +46,24 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
   draft,
   onSaveDraft,
   onPublish,
-  onManageMedications
+  onManageMedications,
+  onTemperatureMeasured
 }) => {
   const [form, setForm] = useState<AppointmentDraft>(draft ?? defaultDraft);
   const [focusInput, setFocusInput] = useState('');
   const [snapshots, setSnapshots] = useState<
     { emotion: string; redness: number; imageData: string }[]
   >([]);
+
+  const [showAIDiagnosis, setShowAIDiagnosis] = useState(false);
+  const [aiDiagnosisData, setAiDiagnosisData] = useState<any>(null);
+  const [aiDiagnosisLoading, setAiDiagnosisLoading] = useState(false);
+  const [aiDiagnosisError, setAiDiagnosisError] = useState<string | null>(null);
+
+  const [temperature, setTemperature] = useState<number | null>(draft?.temperatureC ?? null);
+  const [tempLoading, setTempLoading] = useState(false);
+  const [tempError, setTempError] = useState<string | null>(null);
+  const [showTempReminder, setShowTempReminder] = useState(false);
 
   const getDurationParts = (value?: string) => {
     if (!value) {
@@ -76,18 +88,18 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     return parts.join(' ');
   };
 
-  // AI Diagnosis states
-  const [showAIDiagnosis, setShowAIDiagnosis] = useState(false);
-  const [aiDiagnosisData, setAiDiagnosisData] = useState<any>(null);
-  const [aiDiagnosisLoading, setAiDiagnosisLoading] = useState(false);
-  const [aiDiagnosisError, setAiDiagnosisError] = useState<string | null>(null);
-
   useEffect(() => {
     if (isOpen) {
       setForm(draft ?? defaultDraft);
       setFocusInput('');
+      setTemperature(draft?.temperatureC ?? null);
+      setTempError(null);
+      setShowTempReminder(false);
       document.body.style.overflow = 'hidden';
     } else {
+      setTemperature(null);
+      setTempError(null);
+      setShowTempReminder(false);
       document.body.style.overflow = '';
     }
     return () => {
@@ -128,15 +140,40 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     onClose();
   };
 
-  const durationParts = getDurationParts(form.duration);
+  const handleTakeTemperature = async () => {
+    setShowTempReminder(true);
+    setTempLoading(true);
+    setTempError(null);
 
-  // snapshot handler receives the **current values from the webcam** directly
-  const handleSnapshot = (snapshot: { emotion: string; redness: number; imageData: string }) => {
-    setSnapshots((prev) => [...prev, snapshot]);
+    try {
+      const response = await fetch('http://localhost:4002/api/temperature');
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get temperature');
+      }
+
+      const reading = Number(data.temperature);
+      if (!Number.isFinite(reading)) {
+        throw new Error('Temperature sensor returned an invalid value');
+      }
+
+      setTemperature(reading);
+      updateForm({ temperatureC: reading });
+      if (onTemperatureMeasured) {
+        onTemperatureMeasured(reading);
+      }
+    } catch (error) {
+      console.error('Temperature measurement error:', error);
+      setTempError(error instanceof Error ? error.message : 'Unknown error occurred');
+      setTemperature(null);
+      updateForm({ temperatureC: undefined });
+    } finally {
+      setTempLoading(false);
+    }
   };
 
   const handleAIDiagnosis = async () => {
-    // Validate that we have symptom summary
     if (!form.symptomSummary || form.symptomSummary.trim() === '') {
       alert('Please enter a symptom summary before requesting AI diagnosis.');
       return;
@@ -147,13 +184,12 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     setShowAIDiagnosis(true);
 
     try {
-      // Get the latest redness score from webcam snapshots
       const latestRednessScore = snapshots.length > 0 ? snapshots[snapshots.length - 1].redness : undefined;
 
       const response = await fetch('http://localhost:4000/api/ai-diagnosis', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           symptomSummary: form.symptomSummary,
@@ -168,8 +204,8 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
           rednessScore: latestRednessScore,
           diagnosticFocus: form.diagnosticFocus,
           notes: form.notes,
-          patientAge: patientAge
-        }),
+          patientAge
+        })
       });
 
       if (!response.ok) {
@@ -185,6 +221,13 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
     } finally {
       setAiDiagnosisLoading(false);
     }
+  };
+
+  const durationParts = getDurationParts(form.duration);
+
+  // snapshot handler receives the **current values from the webcam** directly
+  const handleSnapshot = (snapshot: { emotion: string; redness: number; imageData: string }) => {
+    setSnapshots((prev) => [...prev, snapshot]);
   };
 
   return (
@@ -265,6 +308,8 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Vitals */}
           <div className="row g-4">
             <div className="col-6 col-lg-3">
               <label className="form-label">heartbeat (bpm)</label>
@@ -369,38 +414,55 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
             </div>
           </div>
 
-          {/* Webcam */}
-          <div className="gradient-panel rounded-4 p-4 mt-3 text-center">
-            <h6>Live Webcam Feed</h6>
-            <WebcamStream
-              width={600}
-              height={500}
-              onSnapshot={handleSnapshot} // passes emotion/redness/frame at snapshot
-            />
-          </div>
-
-          {/* Snapshots */}
-          <div className="mt-3">
-            <h6>Saved Snapshots</h6>
-            {snapshots.length === 0 && <p className="text-muted small">No snapshots yet.</p>}
-            <div className="d-flex flex-wrap gap-2">
-              {snapshots.map((snap, i) => (
-                <div key={i} className="snapshot-card border rounded p-1" style={{ width: 100, textAlign: 'center' }}>
-                  <img
-                    src={`data:image/jpeg;base64,${snap.imageData}`}
-                    alt={`snapshot-${i}`}
-                    style={{ width: '100%', borderRadius: 4 }}
-                  />
-                  <div className="small mt-1">
-                    <div>Emotion: {snap.emotion}</div>
-                    <div>Redness: {snap.redness.toFixed(1)}</div>
-                  </div>
+          {/* Temperature measurement */}
+          <div className="gradient-panel rounded-4 p-4">
+            <div className="d-flex gap-3 gap-lg-4 align-items-start">
+              <i className="bi bi-heart-pulse fs-4 text-brand-secondary" />
+              <div className="flex-grow-1">
+                <strong>take temperature</strong>
+                <div className="text-muted small">
+                  measure skin/body temperature via the Arduino sensor. place a finger on the sensor before starting to capture a stable reading.
                 </div>
-              ))}
+                <div className="d-flex flex-wrap gap-2 align-items-center mt-2">
+                  <button
+                    type="button"
+                    className="btn btn-gradient btn-sm"
+                    onClick={handleTakeTemperature}
+                    disabled={tempLoading}
+                  >
+                    <i className="bi bi-thermometer-half me-1" /> take temperature
+                  </button>
+                  {tempLoading && (
+                    <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" />
+                  )}
+                  {showTempReminder && !tempLoading && (
+                    <span className="text-muted small">keep contact with the sensor until the reading appears.</span>
+                  )}
+                </div>
+                <div className="mt-3">
+                  {temperature !== null && (
+                    <div>
+                      <span className="fw-semibold">Temperature: {temperature.toFixed(2)} °C</span>
+                      <div className="small mt-1">
+                        {temperature >= 22 && temperature <= 35 && (
+                          <span className="text-success">Body temperature appears in a healthy range.</span>
+                        )}
+                        {temperature < 22 && (
+                          <span className="text-warning">Detected temperature is below the expected range.</span>
+                        )}
+                        {temperature > 35 && (
+                          <span className="text-danger">Detected temperature is above the expected range.</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {tempError && <div className="text-danger small">{tempError}</div>}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* AI Diagnosis */}
+          {/* AI-assisted diagnosis */}
           <div className="gradient-panel rounded-4 p-4">
             <div className="d-flex gap-3 gap-lg-4 align-items-start">
               <i className="bi bi-robot fs-4 text-brand-secondary" />
@@ -411,7 +473,7 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                     get evidence-based diagnostic suggestions powered by Gemini AI and PubMed research.
                   </div>
                 </div>
-                <div className="d-flex gap-2">
+                <div className="d-flex gap-2 align-items-center flex-wrap">
                   <button
                     type="button"
                     className="btn btn-gradient btn-sm"
@@ -429,13 +491,42 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
                       </>
                     )}
                   </button>
-                  {form.symptomSummary && form.symptomSummary.trim() === '' && (
-                    <span className="text-muted small align-self-center">
-                      enter symptoms first
-                    </span>
+                  {(!form.symptomSummary || form.symptomSummary.trim() === '') && !aiDiagnosisLoading && (
+                    <span className="text-muted small">enter symptoms first</span>
                   )}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Webcam */}
+          <div className="gradient-panel rounded-4 p-4 text-center">
+            <h6>Live Webcam Feed</h6>
+            <WebcamStream
+              width={600}
+              height={500}
+              onSnapshot={handleSnapshot}
+            />
+          </div>
+
+          {/* Snapshots */}
+          <div>
+            <h6>Saved Snapshots</h6>
+            {snapshots.length === 0 && <p className="text-muted small">No snapshots yet.</p>}
+            <div className="d-flex flex-wrap gap-2">
+              {snapshots.map((snap, index) => (
+                <div key={index} className="snapshot-card border rounded p-1" style={{ width: 100, textAlign: 'center' }}>
+                  <img
+                    src={`data:image/jpeg;base64,${snap.imageData}`}
+                    alt={`snapshot-${index}`}
+                    style={{ width: '100%', borderRadius: 4 }}
+                  />
+                  <div className="small mt-1">
+                    <div>Emotion: {snap.emotion}</div>
+                    <div>Redness: {snap.redness.toFixed(1)}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -461,8 +552,8 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
               </button>
             </div>
             <datalist id="focus-suggestions">
-              {FOCUS_SUGGESTIONS.map((s) => (
-                <option key={s} value={s} />
+              {FOCUS_SUGGESTIONS.map((suggestion) => (
+                <option key={suggestion} value={suggestion} />
               ))}
             </datalist>
             <div className="d-flex flex-wrap gap-3 mt-3">
@@ -504,7 +595,6 @@ const AppointmentForm: FC<AppointmentFormProps> = ({
         </form>
       </div>
 
-      {/* AI Diagnosis Results Modal */}
       <AIDiagnosisResults
         isOpen={showAIDiagnosis}
         onClose={() => {
