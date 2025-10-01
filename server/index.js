@@ -238,8 +238,8 @@ app.post('/api/ai-diagnosis', async (req, res) => {
     // Call Python diagnostic assistant using spawn
     const { spawn } = await import('child_process');
 
-    const pythonProcess = spawn('./venv/bin/python', [
-      './backend/scraper-agent/ai_diagnosis_api.py',
+    const pythonProcess = spawn('python3', [
+      '../backend/scraper-agent/ai_diagnosis_api.py',
       JSON.stringify({
         symptom_description: fullSymptomDescription,
         gemini_api_key: process.env.GEMINI_API_KEY,
